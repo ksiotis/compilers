@@ -1,0 +1,61 @@
+/* Simple +/-/* expression language; parser evaluates constant expressions on the fly*/
+/**
+ *  Package and Import Specifications
+ */
+import java_cup.runtime.*;
+
+/**
+ *  Usercode Components
+ */
+parser code {:
+    // Connect this parser to a scanner!
+    Scanner s;
+    Parser(Scanner s){ this.s=s; }
+:}
+
+/* define how to connect to the scanner! */
+scan with {: return s.next_token(); :};
+
+/**
+ *  Symbol Lists
+ */
+
+/* Terminals (tokens returned by the scanner). */
+terminal            SEMI, PLUS, MINUS, EXP, LPAREN, RPAREN;
+terminal Integer    NUMBER;        // our scanner provides numbers as integers
+terminal String     STRING_LITERAL;
+
+/*  Non terminals */
+non terminal            program;
+non terminal String    expr, expr_list;      // used to store evaluated subexpressions
+
+/**
+ *  Precedence Declarations
+ */
+precedence left PLUS, MINUS;
+precedence right EXP;
+
+/**
+ *  The Grammar Rules
+ */
+
+program ::= expr_list:e {:
+			System.out.println("import java.lang.Math;\n");
+			System.out.println("public class Main {");
+			System.out.println("\tpublic static void main(String[] args) {");
+			System.out.printf("%s", e);
+			System.out.println("\t}");
+			System.out.println("}");
+			 :}
+	;
+
+expr_list ::= expr_list:rest expr:e SEMI    {: RESULT = String.format("%s\t\tSystem.out.println(%s);\n", rest, e); :}
+            |                               {: RESULT = ""; :}
+            ;
+expr      ::= expr:e1 PLUS  expr:e2         {: RESULT = String.format("%s + %s", e1, e2); :}
+             | expr:e1 MINUS expr:e2        {: RESULT = String.format("%s - %s", e1, e2); :}
+             | expr:e1 EXP expr:e2          {: RESULT = String.format("(int)Math.pow(%s, %s)", e1, e2); :}
+             | LPAREN expr:e RPAREN         {: RESULT = String.format("(%s)", e); :}
+             | NUMBER:n                     {: RESULT = String.format("%d", n); :}
+             | STRING_LITERAL:s             {: RESULT = String.format("Integer.parseInt(\"%s\", 16)", s); :}  
+             ;
