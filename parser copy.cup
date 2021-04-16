@@ -21,7 +21,7 @@ scan with {: return s.next_token(); :};
  */
 
 /* Terminals (tokens returned by the scanner). */
-terminal            PLUS, LPAREN, RPAREN, LBRACK, RBRACK, COMMA, IF, ELSE, PREFIX, SUFFIX, RPAREN_LBRACK;
+terminal            PLUS, LPAREN, RPAREN, RBRACK, COMMA, IF, ELSE, PREFIX, SUFFIX, RPAREN_LBRACK;
 terminal String     STRING_LITERAL, NAME;
 
 /*  Non terminals */
@@ -85,17 +85,17 @@ args_tail ::= COMMA NAME:s args_tail:t 				{: RESULT = String.format(" ,%s%s", s
 			|										{: RESULT = ""; :}
 			;
 
-concat ::= var_lit:n1 PLUS var_lit:n2 concat_tail:t	{: RESULT = String.format("%s + %s%s", n1, n2, t); :}
+concat ::= NAME:n1 PLUS NAME:n2 concat_tail:t	{: RESULT = String.format("%s + %s%s", n1, n2, t); :}
 		;
 
-concat_tail ::= PLUS var_lit:n	{: RESULT = String.format(" + %s", n); :}
-			|					{: RESULT = ""; :}
+concat_tail ::= PLUS NAME:n	{: RESULT = String.format(" + %s", n); :}
+			|				{: RESULT = ""; :}
 			;
 
 logic_exp ::= IF LPAREN cond:c RPAREN func_content:f1 ELSE func_content:f2 {: RESULT = String.format("if (%s)\n\t%s\nelse\n\t%s", c, f1, f2); :}
 			;
 
-cond ::= var_lit_call:n cond_tail:t	{: RESULT = String.format("%s%s", n, t); :}
+cond ::= var_lit:n cond_tail:t	{: RESULT = String.format("%s%s", n, t); :}
 	;
 
 cond_tail ::= PREFIX var_lit_call:s	{: RESULT = String.format("prefix %s", s); :}
@@ -109,5 +109,4 @@ var_lit ::= NAME:n			{: RESULT = String.format("%s", n); :}
 var_lit_call ::= NAME:n		{: RESULT = String.format("%s", n); :}
 		| STRING_LITERAL:s	{: RESULT = String.format("%s", s); :}
 		| func_call:s		{: RESULT = String.format("%s", s); :}
-		| concat:s			{: RESULT = String.format("%s", s); :}
 		;

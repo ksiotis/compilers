@@ -1,0 +1,9 @@
+jflex scanner.flex
+Reading "scanner.flex"
+Constructing NFA : 94 states in NFA
+Converting NFA to DFA : 
+............................................
+48 states before minimization, 42 states in minimized DFA
+Writing code to "Scanner.java"
+java -jar ../java-cup-11b.jar -interface -parser Parser parser.cup
+Makefile:4: recipe for target 'compile' failed
