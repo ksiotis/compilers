@@ -1,0 +1,117 @@
+/* Simple +/-/* expression language; parser evaluates constant expressions on the fly*/
+/**
+ *  Package and Import Specifications
+ */
+import java_cup.runtime.*;
+
+/**
+ *  Usercode Components
+ */
+parser code {:
+    // Connect this parser to a scanner!
+    Scanner s;
+    Parser(Scanner s){ this.s=s; }
+:}
+
+/* define how to connect to the scanner! */
+scan with {: return s.next_token(); :};
+
+/**
+ *  Symbol Lists
+ */
+
+/* Terminals (tokens returned by the scanner). */
+terminal            PLUS, LPAREN, RPAREN, RBRACK, COMMA, ELSE, PREFIX, SUFFIX, RPAREN_LBRACK, IF_LPAREN;
+terminal String     STRING_LITERAL, NAME;
+
+/*  Non terminals */
+non terminal            program;
+non terminal String    	exp, main, definitions, def_args, def_args_tail, func_content, func_call, args, args_tail, concat, concat_tail, logic_exp, cond, var_lit_call;      // used to store evaluated subexpressions
+
+/**
+ *  Precedence Declarations
+ */
+precedence left PLUS;
+precedence left STRING_LITERAL;
+
+/**
+ *  The Grammar Rules
+ */
+
+program ::= exp:e {:
+	System.out.println("public class Main {");
+	System.out.printf("%s", e);
+	System.out.println("}");
+:}
+;
+
+exp ::= definitions:d main:m	{: RESULT = String.format("\tpublic static void main(String[] args) {\n%s\t}\n\n%s", m, d); :}
+;
+
+definitions ::= definitions:t NAME:n LPAREN def_args:a RPAREN_LBRACK func_content:c RBRACK	{: RESULT = String.format("%s\tpublic static String %s(%s) {\n\t\treturn %s;\n\t}\n\n", t, n, a, c); :}
+	  |																				{: RESULT = ""; :}
+	  ;
+
+main ::= func_call:f main:t			{: RESULT = String.format("\t\tSystem.out.println(%s);\n%s", f, t); :}
+	   | logic_exp:f main:t			{: RESULT = String.format("\t\tSystem.out.println(%s);\n%s", f, t); :}
+	   | STRING_LITERAL:f main:t	{: RESULT = String.format("\t\tSystem.out.println(\"%s\");\n%s", f, t); :}
+	   | concat:f main:t			{: RESULT = String.format("\t\tSystem.out.println(%s);\n%s", f, t); :}
+	   |							{: RESULT = ""; :}
+	   ;
+
+def_args ::= NAME:n def_args_tail:t	{: RESULT = String.format("String %s%s", n, t); :}
+		|							{: RESULT = ""; :}
+		;
+
+def_args_tail ::= COMMA NAME:n def_args_tail:t 	{: RESULT = String.format(", String %s%s", n, t); :}
+                |								{: RESULT = ""; :}
+                ;
+
+func_content ::= var_lit_call:s					{: RESULT = String.format("%s", s); :}
+				| concat:s						{: RESULT = String.format("%s", s); :}
+				| logic_exp:s					{: RESULT = String.format("(%s)", s); :}
+				| LPAREN func_content RPAREN 	{: RESULT = String.format("(%s)", s); :}
+				;
+
+func_call ::= NAME:n LPAREN args:a 		{: RESULT = String.format("%s(%s)", n, a); :}
+			;
+
+args ::= NAME:s args_tail:t RPAREN				{: RESULT = String.format("%s%s", s, t); :}
+	   | STRING_LITERAL:s args_tail:t RPAREN	{: RESULT = String.format("\"%s\"%s", s, t); :}
+	   | func_call:s args_tail:t RPAREN			{: RESULT = String.format("%s%s", s, t); :}
+	   | concat:s args_tail:t RPAREN			{: RESULT = String.format("%s%s", s, t); :}
+	   | logic_exp:s args_tail:t RPAREN			{: RESULT = String.format("%s%s", s, t); :}
+	   | RPAREN									{: RESULT = ""; :}
+	   ;
+
+args_tail ::= COMMA NAME:s args_tail:t 				{: RESULT = String.format(", %s%s", s, t); :}
+			| COMMA STRING_LITERAL:s args_tail:t	{: RESULT = String.format(", \"%s\"%s", s, t); :}
+			| COMMA func_call:s args_tail:t			{: RESULT = String.format(", %s%s", s, t); :}
+			| COMMA concat:s args_tail:t			{: RESULT = String.format(", %s%s", s, t); :}
+			|										{: RESULT = ""; :}
+			;
+
+concat ::= var_lit_call:n1 PLUS var_lit_call:n2 concat_tail:t	{: RESULT = String.format("%s + %s%s", n1, n2, t); :}
+		 | logic_exp:n1 PLUS var_lit_call:n2 concat_tail:t	{: RESULT = String.format("%s + %s%s", n1, n2, t); :}
+		 | var_lit_call:n1 PLUS logic_exp:n2 concat_tail:t	{: RESULT = String.format("%s + %s%s", n1, n2, t); :}
+		 | logic_exp:n1 PLUS logic_exp:n2 concat_tail:t	{: RESULT = String.format("%s + %s%s", n1, n2, t); :}
+		 ;
+
+concat_tail ::= PLUS var_lit_call:n concat_tail:s	{: RESULT = String.format(" + %s%s", n, s); :}
+			  | PLUS logic_exp:n concat_tail:s		{: RESULT = String.format(" + %s%s", n, s); :}
+			  |										{: RESULT = ""; :}
+			  ;
+
+logic_exp ::= IF_LPAREN cond:c func_content:f1 ELSE func_content:f2 {: RESULT = String.format("(%s ? %s : %s)", c, f1, f2); :}
+			;
+
+cond ::= func_content:n PREFIX func_content:s RPAREN	{: RESULT = String.format("(%s).startsWith(%s)", s, n); :}
+	   | func_content:n SUFFIX func_content:s RPAREN	{: RESULT = String.format("(%s).endsWith(%s)", s, n); :}
+	   ;
+
+var_lit_call ::= NAME:n		{: RESULT = String.format("%s", n); :}
+		| STRING_LITERAL:s	{: RESULT = String.format("\"%s\"", s); :}
+		| func_call:s		{: RESULT = String.format("%s", s); :}
+		;
+
+

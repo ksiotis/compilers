@@ -1,4 +1,19 @@
-Siotis Konstantinos sdi1700140
+Σιώτης Κωνσταντίνος
+ΑΜ: 1115201700140
+
+Η υλοποίηση του parser αναπτύχθηκε σε windows 10 με wsl2 ubuntu subsystem με χρήση vscode.
+
+|-------------------|
+|To compile:        |
+|    make           |
+|                   |
+|To execute:        |
+|   make run        |
+|                   |
+|To cleanup files:  |
+|   make clean      |
+|-------------------|
+
 
 # Grammar
 -----------------------------------------------------------------
@@ -66,7 +81,6 @@ first(term exptail4) = {'1', '2', '3', '4', '5', '6', '7', '8', '9'}
 
 ## digit
 first(term exptail5) = {'0','1', '2', '3', '4', '5', '6', '7', '8', '9'}
-
 
 follow(prog)     = {$}
 follow(exp)      = {')', $}

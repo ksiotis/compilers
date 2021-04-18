@@ -59,9 +59,10 @@ LineTerminator = \r|\n|\r\n
 /* White space is a line terminator, space, tab, or line feed. */
 WhiteSpace     = {LineTerminator} | [ \t\f]
 
-Word = [:jletter:] [:jletterdigit:]*
+LetterOrUnderscore = [_A-Za-z][A-Za-z0-9_]*
 
-R_paren_L_bracket   = [)]{WhiteSpace}*[{]
+RParen_LBrack = \){WhiteSpace}*\{
+If_LParen = if{WhiteSpace}*\(
 
 %state STRING
 
@@ -69,21 +70,25 @@ R_paren_L_bracket   = [)]{WhiteSpace}*[{]
 /* ------------------------Lexical Rules Section---------------------- */
 
 <YYINITIAL> {
-/* operators */
- ";"                    { return symbol(sym.SEMI); }
- "+"                    { return symbol(sym.PLUS); }
- "("                    { return symbol(sym.L_PARENTHESIS); }
- ")"                    { return symbol(sym.R_PARENTHESIS); }
- "}"                    { return symbol(sym.R_BRACKET); }
- ","                    { return symbol(sym.COMMA); }
- "if"                   { return symbol(sym.IF); }
+/* keywords */
  "else"                 { return symbol(sym.ELSE); }
  "prefix"               { return symbol(sym.PREFIX); }
  "suffix"               { return symbol(sym.SUFFIX); }
- {WhiteSpace}           { /* just skip what was found, do nothing */ }
- {Word}                 { return symbol(sym.WORD_LITERAL, yytext());}
- {R_paren_L_bracket}    { return symbol(sym.R_PAREN_L_BRACKET); }
 
+/* operators-symbols */
+ "+"                    { return symbol(sym.PLUS); }
+ "("                    { return symbol(sym.LPAREN); }
+ ")"                    { return symbol(sym.RPAREN); }
+ ","                    { return symbol(sym.COMMA); }
+ "}"                    { return symbol(sym.RBRACK); }
+ {RParen_LBrack}        { return symbol(sym.RPAREN_LBRACK); }
+ {If_LParen}            { return symbol(sym.IF_LPAREN); }
+ \"                     { stringBuffer.setLength(0); yybegin(STRING); }
+ 
+ /*{LetterOrUnderscore}   { return symbol(sym.NAME); }*/
+ /*{LetterOrUnderscore}   { stringBuffer.setLength(0); yybegin(NAME); }*/
+ {LetterOrUnderscore}   { return symbol(sym.NAME, yytext());}
+ {WhiteSpace}           { /* just skip what was found, do nothing */ }
 }
 
 <STRING> {

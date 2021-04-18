@@ -3,7 +3,6 @@ all: compile
 compile:
 	javac ./Main.java
 
-execute:
 run:
 	java Main
 
