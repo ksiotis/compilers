@@ -6,8 +6,11 @@ public class FunctionTable {
     Map<String, String> args;
     String[] vars; //current var types
 
+    Map<String, String> localVars;
+
     FunctionTable(String name, String type){
         args = new LinkedHashMap<String, String>();
+        localVars = new LinkedHashMap<String, String>();
     }
 
     public static void main(String[] args) {

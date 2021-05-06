@@ -25,6 +25,7 @@ public class ClassTable {
     }
 
     public Integer size() {
+        /*Return the size (sum of offsets) of all fields and methods*/
         Integer sum = 0;
         Set<String> keys = this.fields.keySet();
         for (String key : keys) {
