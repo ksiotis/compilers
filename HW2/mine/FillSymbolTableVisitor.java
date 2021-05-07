@@ -4,10 +4,6 @@ import java.util.LinkedHashMap;
 
 public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
 
-    public void myprint(String a) {//TODO remove
-        // System.out.println(a);
-    }
-
     /**
     * f0 -> MainClass()
     * f1 -> ( TypeDeclaration() )*
@@ -15,14 +11,9 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
     */
     @Override
     public String visit(Goal n, SymbolTable symbols) {
-        myprint("Entering Goal");
         n.f0.accept(this, symbols);
-        // myprint("---------------");
-        // symbols.print();
-        // myprint("--------------");
         n.f1.accept(this, symbols);
-        myprint("Exiting Goal");
-        return "File Parsed Successfully";
+        return null;
     }
 
     /**
@@ -47,7 +38,6 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
     */
     @Override
     public String visit(MainClass n, SymbolTable symbols) {
-        myprint("Entering MainClass");
 
         // create class with name (f1)
         String className = n.f1.accept(this, symbols);
@@ -75,11 +65,9 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
 
         n.f15.accept(this, symbols);
 
-        symbols.currentClass.size = symbols.currentClass.size();
-
+        symbols.currentClass.size = symbols.currentClass.size(); //update class size
         symbols.currentClass = null; //exit main
 
-        myprint("Exiting MainClass");
         return null;
     }
 
@@ -89,11 +77,7 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
     */
     @Override
     public String visit(TypeDeclaration n, SymbolTable symbols) {
-        myprint("Entering TypeDeclaration");
-
         n.f0.accept(this, symbols);
-
-        myprint("Exiting TypeDeclaration");
         return null;
     }
 
@@ -109,7 +93,6 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
     public String visit(ClassDeclaration n, SymbolTable symbols) {
         
         String className = n.f1.accept(this, symbols);
-        myprint("\nEntering ClassDeclaration:" + className);
         ClassTable myClass = new ClassTable(className);
         if (symbols.classes.putIfAbsent(className, myClass) != null) {
             throw new RuntimeException("The type "+className+" is already defined");
@@ -126,11 +109,8 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
             n.f4.accept(this, symbols);
         }
 
-        symbols.currentClass.size = symbols.currentClass.size();
-
+        symbols.currentClass.size = symbols.currentClass.size(); //update class size
         symbols.currentClass = null; //exit main
-
-        myprint("Exiting ClassDeclaration");
         return null;
     }
 
@@ -156,7 +136,7 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
         }
 
         //make sure current class doesn't already exist
-        ClassTable myClass = new ClassTable(className, parent, parentClass.size+1);
+        ClassTable myClass = new ClassTable(className, parent, parentClass.size+parentClass.offset);
         if (symbols.classes.putIfAbsent(className, myClass) != null) {
             throw new RuntimeException("The type "+className+" is already defined");
         }
@@ -187,27 +167,22 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
         
         String type = n.f0.accept(this, symbols);
         String name = n.f1.accept(this, symbols);
-        myprint("Entering VarDeclaration: "+type+' '+name);
         
         LinkedHashMap<String, String> target;
-        if (symbols.currentClass != null) {
-            if (symbols.currentFunction != null) {
-                target = symbols.currentFunction.localVars;
-                if (target.putIfAbsent(name, type) != null) {
-                    throw new RuntimeException("Duplicate local variable "+ name);
-                }
-            }
-            else {
-                target = symbols.currentClass.fields;
-                if (target.putIfAbsent(name, type) != null) {
-                    throw new RuntimeException("Duplicate field "+symbols.currentClass.name+"."+name);
-                }
+
+        if (symbols.currentFunction != null) {
+            target = symbols.currentFunction.localVars;
+            if (target.putIfAbsent(name, type) != null) {
+                throw new RuntimeException("Duplicate local variable "+ name);
             }
         }
         else {
-            throw new RuntimeException("Trying to insert variables to nowhere "+name);//TODO remove later
+            target = symbols.currentClass.fields;
+            if (target.putIfAbsent(name, type) != null) {
+                throw new RuntimeException("Duplicate field "+symbols.currentClass.name+"."+name);
+            }
         }
-        myprint("Exiting VarDeclaration");
+
         return null;
     }
 
@@ -231,7 +206,6 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
         
         String type = n.f1.accept(this, symbols);
         String name = n.f2.accept(this, symbols);
-        myprint("Entering MethodDeclaration: "+type+' '+name);
 
         FunctionTable myMethod = new FunctionTable(name, type);
         symbols.currentFunction = myMethod;
@@ -252,7 +226,6 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
 
         //exiting current method
         symbols.currentFunction = null;
-        myprint("Exiting MethodDeclaration");
         return null;
     }
 
@@ -277,13 +250,8 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
         String type = n.f0.accept(this, symbols);
         String name = n.f1.accept(this, symbols);
 
-        if (symbols.currentFunction != null) {
-            if (symbols.currentFunction.args.putIfAbsent(name, type) != null) {
-                throw new RuntimeException("Duplicate parameter "+ name);
-            }
-        }
-        else {
-            throw new RuntimeException("Trying to insert argument to no method "+name);//TODO remove later
+        if (symbols.currentFunction.args.putIfAbsent(name, type) != null) {
+            throw new RuntimeException("Duplicate parameter "+ name);
         }
 
         return null;

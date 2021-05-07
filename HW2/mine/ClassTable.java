@@ -53,6 +53,8 @@ public class ClassTable {
     public void print() {
         System.out.println("\nClassTable: "+ this.name);
         System.out.println("parent: "+this.parent);
+        System.out.println("offset: "+this.offset);
+        System.out.println("size: "+this.size);
         System.out.println("fields: ");
 
         for(Map.Entry<String,String> entry : this.fields.entrySet()) {
