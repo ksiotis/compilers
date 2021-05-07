@@ -16,10 +16,11 @@ public class Main {
                 SymbolTable symbols = new SymbolTable();
                 MiniJavaParser parser = new MiniJavaParser(fis);
                 // System.err.println("File " + i + " parsed successfully.");
-                System.err.println("File " + 0 + " parsed successfully.");
+                // System.err.println("File " + 0 + " parsed successfully.");
                 FillSymbolTableVisitor eval = new FillSymbolTableVisitor();
                 Goal root = parser.Goal();
-                System.out.println(root.accept(eval, symbols));
+                root.accept(eval, symbols);
+                symbols.print();
             // }
         }
         catch(ParseException ex) {

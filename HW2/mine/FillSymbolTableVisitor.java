@@ -1,9 +1,12 @@
 import syntaxtree.*;
 import visitor.GJDepthFirst;
-// import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.LinkedHashMap;
 
 public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
+
+    public void myprint(String a) {//TODO remove
+        // System.out.println(a);
+    }
 
     /**
     * f0 -> MainClass()
@@ -12,9 +15,13 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
     */
     @Override
     public String visit(Goal n, SymbolTable symbols) {
+        myprint("Entering Goal");
         n.f0.accept(this, symbols);
-        // n.f1.accept(this, symbols);
-
+        // myprint("---------------");
+        // symbols.print();
+        // myprint("--------------");
+        n.f1.accept(this, symbols);
+        myprint("Exiting Goal");
         return "File Parsed Successfully";
     }
 
@@ -40,6 +47,8 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
     */
     @Override
     public String visit(MainClass n, SymbolTable symbols) {
+        myprint("Entering MainClass");
+
         // create class with name (f1)
         String className = n.f1.accept(this, symbols);
         ClassTable myClass = new ClassTable(className);
@@ -64,66 +73,109 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
         if (n.f14.present())
             n.f14.accept(this, symbols);
 
-        /*TODO
-            exec statements (f15)
-        */
         n.f15.accept(this, symbols);
 
         symbols.currentClass.size = symbols.currentClass.size();
 
         symbols.currentClass = null; //exit main
 
+        myprint("Exiting MainClass");
         return null;
     }
 
-    // /**
-    // * f0 -> ClassDeclaration()
-    // *       | ClassExtendsDeclaration()
-    // */
-    // @Override
-    // public String visit(TypeDeclaration n, SymbolTable symbols) {
-    //     n.f0.accept(this);
-    // }
+    /**
+    * f0 -> ClassDeclaration()
+    *       | ClassExtendsDeclaration()
+    */
+    @Override
+    public String visit(TypeDeclaration n, SymbolTable symbols) {
+        myprint("Entering TypeDeclaration");
 
-    // /**
-    // * f0 -> "class"
-    // * f1 -> Identifier()
-    // * f2 -> "{"
-    // * f3 -> ( VarDeclaration() )*
-    // * f4 -> ( MethodDeclaration() )*
-    // * f5 -> "}"
-    // */
-    // @Override
-    // public String visit(ClassDeclaration n, SymbolTable symbols)) {
-    //     n.f0.accept(this);
-    //     n.f1.accept(this);
-    //     n.f2.accept(this);
-    //     n.f3.accept(this);
-    //     n.f4.accept(this);
-    //     n.f5.accept(this);
-    // }
+        n.f0.accept(this, symbols);
 
-    // /**
-    // * f0 -> "class"
-    // * f1 -> Identifier()
-    // * f2 -> "extends"
-    // * f3 -> Identifier()
-    // * f4 -> "{"
-    // * f5 -> ( VarDeclaration() )*
-    // * f6 -> ( MethodDeclaration() )*
-    // * f7 -> "}"
-    // */
-    // @Override
-    // public void visit(ClassExtendsDeclaration n) {
-    //     n.f0.accept(this);
-    //     n.f1.accept(this);
-    //     n.f2.accept(this);
-    //     n.f3.accept(this);
-    //     n.f4.accept(this);
-    //     n.f5.accept(this);
-    //     n.f6.accept(this);
-    //     n.f7.accept(this);
-    // }
+        myprint("Exiting TypeDeclaration");
+        return null;
+    }
+
+    /**
+    * f0 -> "class"
+    * f1 -> Identifier()
+    * f2 -> "{"
+    * f3 -> ( VarDeclaration() )*
+    * f4 -> ( MethodDeclaration() )*
+    * f5 -> "}"
+    */
+    @Override
+    public String visit(ClassDeclaration n, SymbolTable symbols) {
+        
+        String className = n.f1.accept(this, symbols);
+        myprint("\nEntering ClassDeclaration:" + className);
+        ClassTable myClass = new ClassTable(className);
+        if (symbols.classes.putIfAbsent(className, myClass) != null) {
+            throw new RuntimeException("The type "+className+" is already defined");
+        }
+
+        // set current class in symbolTable
+        symbols.currentClass = myClass;
+
+        if (n.f3.present()) {
+            n.f3.accept(this, symbols);
+        }
+
+        if (n.f4.present()) {
+            n.f4.accept(this, symbols);
+        }
+
+        symbols.currentClass.size = symbols.currentClass.size();
+
+        symbols.currentClass = null; //exit main
+
+        myprint("Exiting ClassDeclaration");
+        return null;
+    }
+
+    /**
+    * f0 -> "class"
+    * f1 -> Identifier()
+    * f2 -> "extends"
+    * f3 -> Identifier()
+    * f4 -> "{"
+    * f5 -> ( VarDeclaration() )*
+    * f6 -> ( MethodDeclaration() )*
+    * f7 -> "}"
+    */
+    @Override
+    public String visit(ClassExtendsDeclaration n, SymbolTable symbols) {
+        String className = n.f1.accept(this, symbols);
+        String parent = n.f3.accept(this, symbols);
+
+        //make sure parent class exists
+        ClassTable parentClass = symbols.classes.get(parent);
+        if (parentClass == null) {
+            throw new RuntimeException(parent+" cannot be resolved to a type");
+        }
+
+        //make sure current class doesn't already exist
+        ClassTable myClass = new ClassTable(className, parent, parentClass.size+1);
+        if (symbols.classes.putIfAbsent(className, myClass) != null) {
+            throw new RuntimeException("The type "+className+" is already defined");
+        }
+
+        // set current class in symbolTable
+        symbols.currentClass = myClass;
+
+        if (n.f5.present())
+            n.f5.accept(this, symbols);
+
+        if (n.f6.present())
+            n.f6.accept(this, symbols);
+
+        symbols.currentClass.size = symbols.currentClass.size();
+
+        symbols.currentClass = null; //exit current class
+
+        return null;
+    }
 
     /**
     * f0 -> Type()
@@ -132,10 +184,12 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
     */
     @Override
     public String visit(VarDeclaration n, SymbolTable symbols) {
+        
         String type = n.f0.accept(this, symbols);
         String name = n.f1.accept(this, symbols);
+        myprint("Entering VarDeclaration: "+type+' '+name);
         
-        Map<String, String> target;
+        LinkedHashMap<String, String> target;
         if (symbols.currentClass != null) {
             if (symbols.currentFunction != null) {
                 target = symbols.currentFunction.localVars;
@@ -153,81 +207,107 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
         else {
             throw new RuntimeException("Trying to insert variables to nowhere "+name);//TODO remove later
         }
+        myprint("Exiting VarDeclaration");
+        return null;
+    }
 
+    /**
+    * f0 -> "public"
+    * f1 -> Type()
+    * f2 -> Identifier()
+    * f3 -> "("
+    * f4 -> ( FormalParameterList() )?
+    * f5 -> ")"
+    * f6 -> "{"
+    * f7 -> ( VarDeclaration() )*
+    * f8 -> ( Statement() )*
+    * f9 -> "return"
+    * f10 -> Expression()
+    * f11 -> ";"
+    * f12 -> "}"
+    */
+    @Override
+    public String visit(MethodDeclaration n, SymbolTable symbols) {
         
+        String type = n.f1.accept(this, symbols);
+        String name = n.f2.accept(this, symbols);
+        myprint("Entering MethodDeclaration: "+type+' '+name);
+
+        FunctionTable myMethod = new FunctionTable(name, type);
+        symbols.currentFunction = myMethod;
+        
+        if (n.f4.present())
+            n.f4.accept(this, symbols);
+        
+        if (symbols.currentClass.methods.putIfAbsent(name, myMethod) != null) {
+            throw new RuntimeException("Duplicate method "+name+"("+myMethod.toString()+") in type "+symbols.currentClass.name);
+        }
+        
+        if (n.f7.present())
+            n.f7.accept(this, symbols);
+
+        // n.f8.accept(this, symbols);
+
+        // n.f10.accept(this, symbols);
+
+        //exiting current method
+        symbols.currentFunction = null;
+        myprint("Exiting MethodDeclaration");
+        return null;
+    }
+
+    /**
+    * f0 -> FormalParameter()
+    * f1 -> FormalParameterTail()
+    */
+    @Override
+    public String visit(FormalParameterList n, SymbolTable symbols) {
+        n.f0.accept(this, symbols);
+        n.f1.accept(this, symbols);
 
         return null;
     }
 
-    // /**
-    // * f0 -> "public"
-    // * f1 -> Type()
-    // * f2 -> Identifier()
-    // * f3 -> "("
-    // * f4 -> ( FormalParameterList() )?
-    // * f5 -> ")"
-    // * f6 -> "{"
-    // * f7 -> ( VarDeclaration() )*
-    // * f8 -> ( Statement() )*
-    // * f9 -> "return"
-    // * f10 -> Expression()
-    // * f11 -> ";"
-    // * f12 -> "}"
-    // */
-    // @Override
-    // public void visit(MethodDeclaration n) {
-    //     n.f0.accept(this);
-    //     n.f1.accept(this);
-    //     n.f2.accept(this);
-    //     n.f3.accept(this);
-    //     n.f4.accept(this);
-    //     n.f5.accept(this);
-    //     n.f6.accept(this);
-    //     n.f7.accept(this);
-    //     n.f8.accept(this);
-    //     n.f9.accept(this);
-    //     n.f10.accept(this);
-    //     n.f11.accept(this);
-    //     n.f12.accept(this);
-    // }
+    /**
+    * f0 -> Type()
+    * f1 -> Identifier()
+    */
+    @Override
+    public String visit(FormalParameter n, SymbolTable symbols) {
+        String type = n.f0.accept(this, symbols);
+        String name = n.f1.accept(this, symbols);
 
-    // /**
-    // * f0 -> FormalParameter()
-    // * f1 -> FormalParameterTail()
-    // */
-    // @Override
-    // public void visit(FormalParameterList n) {
-    //     n.f0.accept(this);
-    //     n.f1.accept(this);
-    // }
+        if (symbols.currentFunction != null) {
+            if (symbols.currentFunction.args.putIfAbsent(name, type) != null) {
+                throw new RuntimeException("Duplicate parameter "+ name);
+            }
+        }
+        else {
+            throw new RuntimeException("Trying to insert argument to no method "+name);//TODO remove later
+        }
 
-    // /**
-    // * f0 -> Type()
-    // * f1 -> Identifier()
-    // */
-    // @Override
-    // public void visit(FormalParameter n) {
-    //     n.f0.accept(this);
-    //     n.f1.accept(this);
-    // }
+        return null;
+    }
 
-    // /**
-    // * f0 -> ( FormalParameterTerm() )*
-    // */
-    // @Override
-    // public void visit(FormalParameterTail n) {
-    //     n.f0.accept(this);
-    // }
+    /**
+    * f0 -> ( FormalParameterTerm() )*
+    */
+    @Override
+    public String visit(FormalParameterTail n, SymbolTable symbols) {
+        if (n.f0.present())
+            n.f0.accept(this, symbols);
+        return null;
+    }
 
-    // /**
-    // * f0 -> ","
-    // * f1 -> FormalParameter()
-    // */
-    // @Override
-    // public void visit(FormalParameterTerm n) {
-    //     n.f0.accept(this);
-    //     n.f1.accept(this);
-    // }
+    /**
+    * f0 -> ","
+    * f1 -> FormalParameter()
+    */
+    @Override
+    public String visit(FormalParameterTerm n, SymbolTable symbols) {
+        n.f1.accept(this, symbols);
+        return null;
+    }
 
     /**
     * f0 -> ArrayType()
@@ -255,7 +335,7 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
     */
     @Override
     public String visit(BooleanType n, SymbolTable symbols) {
-        return "Boolean";
+        return "boolean";
     }
 
 
@@ -264,7 +344,7 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
     */
     @Override
     public String visit(IntegerType n, SymbolTable symbols) {
-        return "Integer";
+        return "int";
     }
 
     // /**

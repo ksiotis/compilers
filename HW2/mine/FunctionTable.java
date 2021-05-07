@@ -1,19 +1,32 @@
-import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.LinkedHashMap;
 
 public class FunctionTable {
     String name, type;
-    Map<String, String> args;
+    LinkedHashMap<String, String> args;
     String[] vars; //current var types
 
-    Map<String, String> localVars;
+    LinkedHashMap<String, String> localVars;
 
     FunctionTable(String name, String type){
-        args = new LinkedHashMap<String, String>();
-        localVars = new LinkedHashMap<String, String>();
+        this.name = name;
+        this.type = type;
+        this.args = new LinkedHashMap<String, String>();
+        this.localVars = new LinkedHashMap<String, String>();
     }
 
-    public static void main(String[] args) {
+    @Override
+    public String toString() {
+        String ret = "";
+
+        for(Map.Entry<String,String> entry : this.args.entrySet()){
+            ret += entry.getValue()+" "+entry.getKey()+",";
+        }
         
+        if (ret != "") {
+            ret = ret.substring(0, ret.length()-1);
+        }
+
+        return ret;
     }
 }

@@ -2,7 +2,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class SymbolTable {
-    Map<String,ClassTable> classes;
+    LinkedHashMap<String,ClassTable> classes;
     // Map<String,FunctionTable> methods;
     // Map<String, String> vars;
 
@@ -16,5 +16,12 @@ public class SymbolTable {
 
         currentClass = null;
         currentFunction = null;
+    }
+
+    //for debugging
+    public void print() {
+        for(Map.Entry<String,ClassTable> entry : this.classes.entrySet()) {
+            entry.getValue().print();
+        }
     }
 }
