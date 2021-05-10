@@ -17,10 +17,12 @@ public class Main {
                 MiniJavaParser parser = new MiniJavaParser(fis);
                 // System.err.println("File " + i + " parsed successfully.");
                 // System.err.println("File " + 0 + " parsed successfully.");
-                FillSymbolTableVisitor eval = new FillSymbolTableVisitor();
+                FillSymbolTableVisitor symb = new FillSymbolTableVisitor();
+                TypecheckVisitor types = new TypecheckVisitor();
                 Goal root = parser.Goal();
-                root.accept(eval, symbols);
+                root.accept(symb, symbols);
                 symbols.print();
+                root.accept(types, symbols);
             // }
         }
         catch(ParseException ex) {
