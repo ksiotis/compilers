@@ -27,7 +27,7 @@ Two visitors where used:
 
 #### Alternative use:
 
-    runInDirectory.sh <Pattern of files>
+    runInDirectory.sh <Directory of files>
 
 #### To cleanup files:
 
