@@ -2,6 +2,8 @@ import syntaxtree.*;
 import visitor.GJDepthFirst;
 // import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TypecheckVisitor extends GJDepthFirst<String, SymbolTable>{
 
@@ -114,9 +116,6 @@ public class TypecheckVisitor extends GJDepthFirst<String, SymbolTable>{
         String name = n.f2.accept(this, symbols);
         
         FunctionTable myMethod = symbols.currentClass.methods.get(name);
-        if (myMethod == null) {
-            throw new RuntimeException("REEEEEEEEEE");//TODO remove
-        }
         symbols.currentFunction = myMethod;
         
         String exptype = symbols.currentFunction.type;
@@ -124,7 +123,8 @@ public class TypecheckVisitor extends GJDepthFirst<String, SymbolTable>{
         n.f8.accept(this, symbols);
 
         String type = n.f10.accept(this, symbols);
-        if (type != exptype) {
+        // !isSubclassOf(current, entry.getValue(), symbols)
+        if (!isSubclassOf(type,exptype,symbols)) {
             throw new RuntimeException("Type mismatch: expected type "+exptype+" received type "+type);
         }
 
@@ -177,7 +177,7 @@ public class TypecheckVisitor extends GJDepthFirst<String, SymbolTable>{
         if (actualType == "this") {
             actualType = symbols.currentFunction.parent.name;
         }
-        if (actualType != expectedType) {
+        if (!isSubclassOf(actualType,expectedType,symbols)) {
             throw new RuntimeException("Type mismatch: expected type "+expectedType+" received type "+actualType);
         }
 
@@ -443,25 +443,23 @@ public class TypecheckVisitor extends GJDepthFirst<String, SymbolTable>{
         String myfield = symbols.currentClass.hasField(fieldOrMethod);
         FunctionTable mymethod = symbols.currentClass.hasMethod(fieldOrMethod);
 
-        if (myfield != null && mymethod != null) {//if it is both a field and a method
-            throw new RuntimeException("REEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");//TODO remove
-        }
-
         // if it is a field
-        if (myfield != null) {
+        if (myfield != null && !n.f4.present() && mymethod == null){
             ret = myfield; //return its type
         }
 
         // if it is a method
         if (mymethod != null) {
-                
-            if (mymethod.name == "Remove") {//TODO remove
-                int a = 0;
+            if (symbols.currentFunction.name=="bar" && mymethod.name == "foo" && symbols.currentClass.name == "A") {
+                int a = 0;//TODO remove
             }
 
             //handle arguments of fieldOrMethod in ExpressionList
+            List<String> tempVars = new ArrayList<String>(symbols.vars);
+            symbols.vars.clear();
             n.f4.accept(this, symbols);
             
+
             //check if ExpressionList gave the correct arguments
             for (Map.Entry<String,String> entry : mymethod.args.entrySet()) {
                 String current = symbols.vars.remove(0);
@@ -476,6 +474,7 @@ public class TypecheckVisitor extends GJDepthFirst<String, SymbolTable>{
                 throw new RuntimeException("The method "+mymethod.toString()+" in the type "+symbols.currentClass.name+" is not applicable for these argument types");
             }
 
+            symbols.vars = tempVars;
             ret = mymethod.type;
         }
 
@@ -494,7 +493,6 @@ public class TypecheckVisitor extends GJDepthFirst<String, SymbolTable>{
         String name = n.f0.accept(this, symbols);
         String type = symbols.currentFunction.canAccessVariable(name);
 
-        symbols.vars.clear();
         symbols.vars.add(type != null ? type : name);
         n.f1.accept(this, symbols);
 
@@ -661,11 +659,12 @@ public class TypecheckVisitor extends GJDepthFirst<String, SymbolTable>{
         if (child == "this") {
             child = symbols.currentClass.name;
         }
+
         ClassTable c = symbols.classes.get(child);
         if (child == parent) {
             return true;
         }
-        else if (c.parent != null) {
+        else if (c != null && c.parent != null) {
             return isSubclassOf(c.parent.name, parent, symbols);
         }
 

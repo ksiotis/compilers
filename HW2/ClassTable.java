@@ -23,35 +23,6 @@ public class ClassTable {
         this.methods = new LinkedHashMap<String, FunctionTable>();
     }
 
-    // public Integer size() {
-
-    //     /*Return the size (sum of offsets) of all fields and methods*/
-    //     Integer sum = 0;
-    //     for (String key : this.fields.keySet()) {
-    //         switch (fields.get(key)) {
-    //             case "Integer":
-    //                 sum += 4;
-    //                 break;
-    //             case "Boolean":
-    //                 sum += 1;
-    //                 break;
-    //             default: //array pointer
-    //                 sum += 8;
-    //                 break;
-    //         }
-    //     }
-
-    //     for (Integer i = 0; i < this.methods.size(); i++) {
-    //         sum += 8; //every method is a pointer
-    //     }
-
-    //     return sum;
-    // }
-
-    // public void updateSize() {
-    //     this.size = this.size();
-    // }
-
     String hasField(String name) {
         //check if it exists in local fields
         String ret = this.fields.get(name);
@@ -76,23 +47,47 @@ public class ClassTable {
         return ret;
     }
 
-    //for debugging
-    public void print() {
-        System.out.println("\nClassTable: "+ this.name);
-        System.out.println("parent: "+this.parent);
-        System.out.println("fields: ");
-
-        for(Map.Entry<String,String> entry : this.fields.entrySet()) {
-            System.out.println("\t"+entry.getValue()+" "+entry.getKey());
+    public Offset print(LinkedHashMap<String,Offset> classOffsets) {
+        // get starting offsets
+        Integer varOffset = 0;
+        Integer methodOffset = 0;
+        if (this.parent != null) {
+            varOffset = classOffsets.get(this.parent.name).varOffset;
+            methodOffset = classOffsets.get(this.parent.name).methodOffset;
         }
 
-        System.out.println("methods: ");
-        for(Map.Entry<String,FunctionTable> entry : this.methods.entrySet()) {
-            System.out.println("\t"+entry.getValue().toString()+" :");
-
-            for(Map.Entry<String,String> innerEntry : entry.getValue().localVars.entrySet()) {
-                System.out.println("\t\t"+innerEntry.getValue()+' '+innerEntry.getKey());
+        // print each field, NOTE: fields cannot get overriden
+        System.out.println("---Variables---");
+        for(Map.Entry<String,String> entry : this.fields.entrySet()) {
+            System.out.println(this.name+'.'+entry.getKey()+" : "+varOffset);
+            switch (entry.getValue()) {
+                case "int":
+                    varOffset += 4;
+                    break;
+                case "boolean":
+                    varOffset += 1;
+                    break;
+                default:
+                    varOffset += 8; // if it is a class or int[]
+                    break;
             }
         }
+
+        // print each method
+        System.out.println("---Methods---");
+        for(Map.Entry<String,FunctionTable> entry : this.methods.entrySet()) {
+            // skip main function
+            if (entry.getKey() == "main") {
+                continue;
+            }
+            // check if entry is an overidden method, then skip it
+            if (this.parent != null && this.parent.hasMethod(entry.getKey()) != null) {
+                continue;
+            }
+            System.out.println(this.name+'.'+entry.getKey()+" : "+methodOffset);
+            methodOffset += 8;
+        }
+
+        return new Offset(varOffset, methodOffset);
     }
 }

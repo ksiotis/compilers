@@ -1,6 +1,8 @@
 import syntaxtree.*;
 import visitor.GJDepthFirst;
 import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Iterator;
 
 public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
 
@@ -161,8 +163,14 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
         //if this is a local variable
         if (symbols.currentFunction != null) {
             target = symbols.currentFunction.localVars;
+
+            // if it already exists in arguments
+            if (symbols.currentFunction.args.get(name) != null) {
+                throw new RuntimeException("Duplicate local variable "+name+" to argument");
+            }
+            //check if double decleration
             if (target.putIfAbsent(name, type) != null) {
-                throw new RuntimeException("Duplicate local variable "+ name);
+                throw new RuntimeException("Duplicate local variable "+name);
             }
         }
         //if this is a class field
@@ -205,9 +213,17 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
         if (n.f4.present())
             n.f4.accept(this, symbols);
         
-        //check if method already exists
+        FunctionTable t = symbols.currentClass.hasMethod(name);
+
+        //try to add it
         if (symbols.currentClass.methods.putIfAbsent(name, myMethod) != null) {
-            throw new RuntimeException("Duplicate method "+name+"("+myMethod.toString()+") in type "+symbols.currentClass.name);
+            throw new RuntimeException("Duplicate method "+myMethod.toString()+" in type "+symbols.currentClass.name);
+        }
+        //check if method is being overloaded
+        if (t != null) {
+            if (!linkedHashMapEquals(t.args, myMethod.args) || t.type != myMethod.type) {
+                throw new RuntimeException("Overloaded method "+myMethod.toString()+" in type "+symbols.currentClass.name+" with "+t.toString());
+            }
         }
 
         //variables decleration
@@ -312,4 +328,16 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
         return n.f0.toString();
     }
 
+    public static boolean linkedHashMapEquals(Map<String, String> leftMap, Map<String, String> rightMap) {
+        Iterator<Map.Entry<String, String>> lIter = leftMap.entrySet().iterator();
+        Iterator<Map.Entry<String, String>> rIter = rightMap.entrySet().iterator();
+        while (lIter.hasNext() && rIter.hasNext()) {
+            Map.Entry<String, String> left = lIter.next();
+            Map.Entry<String, String> right = rIter.next();
+            if (left.getValue() != right.getValue()) {
+                return false;
+            }
+        }
+        return !lIter.hasNext() && !rIter.hasNext();
+    }
 }
