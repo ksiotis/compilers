@@ -59,6 +59,10 @@ public class ClassTable {
         // print each field, NOTE: fields cannot get overriden
         System.out.println("---Variables---");
         for(Map.Entry<String,String> entry : this.fields.entrySet()) {
+            // skip main function
+            if (entry.getKey() == "main") {
+                continue;
+            }
             System.out.println(this.name+'.'+entry.getKey()+" : "+varOffset);
             switch (entry.getValue()) {
                 case "int":
