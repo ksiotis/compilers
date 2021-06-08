@@ -1,5 +1,6 @@
 *.class
 *.vscode
+*.class
 HW2/mine/visitor
 HW2/mine/syntaxtree
 HW2/jtb-javacc-2017
