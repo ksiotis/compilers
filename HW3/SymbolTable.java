@@ -22,13 +22,15 @@ public class SymbolTable {
         // container for offsets
         LinkedHashMap<String,Offset> classOffsets = new LinkedHashMap<String,Offset>();
 
-        // for each class go print its offsets
+        // for each class go store its offsets
         for(Map.Entry<String,ClassTable> entry : this.classes.entrySet()) {
-            System.out.println("-----------Class "+entry.getKey()+"-----------");
-            Offset currentOffsets = entry.getValue().print(classOffsets);
-            classOffsets.put(entry.getKey(), currentOffsets);
+            
 
-            System.out.println("");
+            // System.out.println("-----------Class "+entry.getKey()+"-----------");
+            // Offset currentOffsets = entry.getValue().print(classOffsets);
+            // classOffsets.put(entry.getKey(), currentOffsets);
+
+            // System.out.println("");
         }
     }
 }
