@@ -30,13 +30,9 @@ public class Main {
                 root.accept(types, symbols);
 
                 // get offsets
-                LinkedHashMap<String, ClassOffsets> offsets = symbols.getOffsets();
-                // printing for debugging //TODO remove
-                for (Map.Entry<String, ClassOffsets> entry : offsets.entrySet()) {
-                    System.out.println("-----------Class " + entry.getKey() + "-----------");
-                    entry.getValue().print();
-                    System.out.println("---------------------------------------\n");
-                }
+                ClassOffsetsContainer offsets = new ClassOffsetsContainer(symbols);
+
+                
 
                 System.out.println("File " + args[i] + " parsed successfully.");
                 System.out.println("----------------------------------------------");
