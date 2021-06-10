@@ -1,7 +1,6 @@
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-
 public class ClassTable {
     // SymbolTable table;
     String name;
@@ -24,10 +23,10 @@ public class ClassTable {
     }
 
     String hasField(String name) {
-        //check if it exists in local fields
+        // check if it exists in local fields
         String ret = this.fields.get(name);
-        
-        //if it does't, check in parent recursively
+
+        // if it does't, check in parent recursively
         if (ret == null && this.parent != null) {
             ret = this.parent.hasField(name);
         }
@@ -36,10 +35,10 @@ public class ClassTable {
     }
 
     FunctionTable hasMethod(String name) {
-        //check if it exists in local methods
+        // check if it exists in local methods
         FunctionTable ret = this.methods.get(name);
-        
-        //if it does't, check in parent recursively
+
+        // if it does't, check in parent recursively
         if (ret == null && this.parent != null) {
             ret = this.parent.hasMethod(name);
         }
@@ -47,7 +46,12 @@ public class ClassTable {
         return ret;
     }
 
-    public Offset print(LinkedHashMap<String,Offset> classOffsets) {
+    public void setOffsets(LinkedHashMap<String, ClassOffsets> classOffsets) {
+        // Create current class entry
+        String currentClass = this.name;
+        ClassOffsets currentClassOffsets = new ClassOffsets();
+        classOffsets.put(currentClass, currentClassOffsets);
+
         // get starting offsets
         Integer varOffset = 0;
         Integer methodOffset = 0;
@@ -56,14 +60,17 @@ public class ClassTable {
             methodOffset = classOffsets.get(this.parent.name).methodOffset;
         }
 
-        // print each field, NOTE: fields cannot get overriden
-        System.out.println("---Variables---");
-        for(Map.Entry<String,String> entry : this.fields.entrySet()) {
+        // Variables
+        for (Map.Entry<String, String> entry : this.fields.entrySet()) {
             // skip main function
             if (entry.getKey() == "main") {
                 continue;
             }
-            System.out.println(this.name+'.'+entry.getKey()+" : "+varOffset);
+
+            // add variable name and offset
+            currentClassOffsets.variableOffsets.put(entry.getKey(), varOffset);
+
+            // increase offset
             switch (entry.getValue()) {
                 case "int":
                     varOffset += 4;
@@ -77,9 +84,8 @@ public class ClassTable {
             }
         }
 
-        // print each method
-        System.out.println("---Methods---");
-        for(Map.Entry<String,FunctionTable> entry : this.methods.entrySet()) {
+        // Methods
+        for (Map.Entry<String, FunctionTable> entry : this.methods.entrySet()) {
             // skip main function
             if (entry.getKey() == "main") {
                 continue;
@@ -88,10 +94,13 @@ public class ClassTable {
             if (this.parent != null && this.parent.hasMethod(entry.getKey()) != null) {
                 continue;
             }
-            System.out.println(this.name+'.'+entry.getKey()+" : "+methodOffset);
+
+            // add method name and offset
+            currentClassOffsets.methodOffsets.put(entry.getKey(), methodOffset);
             methodOffset += 8;
         }
 
-        return new Offset(varOffset, methodOffset);
+        currentClassOffsets.varOffset = varOffset;
+        currentClassOffsets.methodOffset = methodOffset;
     }
 }
