@@ -1,4 +1,6 @@
-public class LLVMVisitor extends GJDepthFirst<String, void> {
+import java.io.BufferedWriter;
+
+public class LLVMVisitor extends GJDepthFirst<void, BufferedWriter> {
     SymbolTable symbols;
     ClassOffsetsContainer offsets;
 
@@ -13,12 +15,9 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
     * f2 -> <EOF>
     */
     @Override
-    public R visit(Goal n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
-        return _ret;
+    public void visit(Goal n, BufferedWriter file) {
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
     }
   
      /**
@@ -41,35 +40,33 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f16 -> "}"
       * f17 -> "}"
       */
-     public R visit(MainClass n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
-        n.f3.accept(this, argu);
-        n.f4.accept(this, argu);
-        n.f5.accept(this, argu);
-        n.f6.accept(this, argu);
-        n.f7.accept(this, argu);
-        n.f8.accept(this, argu);
-        n.f9.accept(this, argu);
-        n.f10.accept(this, argu);
-        n.f11.accept(this, argu);
-        n.f12.accept(this, argu);
-        n.f13.accept(this, argu);
-        n.f14.accept(this, argu);
-        n.f15.accept(this, argu);
-        n.f16.accept(this, argu);
-        n.f17.accept(this, argu);
-        return _ret;
+     public void visit(MainClass n, BufferedWriter file) {
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
+        n.f3.accept(this, file);
+        n.f4.accept(this, file);
+        n.f5.accept(this, file);
+        n.f6.accept(this, file);
+        n.f7.accept(this, file);
+        n.f8.accept(this, file);
+        n.f9.accept(this, file);
+        n.f10.accept(this, file);
+        n.f11.accept(this, file);
+        n.f12.accept(this, file);
+        n.f13.accept(this, file);
+        n.f14.accept(this, file);
+        n.f15.accept(this, file);
+        n.f16.accept(this, file);
+        n.f17.accept(this, file);
      }
   
      /**
       * f0 -> ClassDeclaration()
       *       | ClassExtendsDeclaration()
       */
-     public R visit(TypeDeclaration n, A argu) {
-        return n.f0.accept(this, argu);
+     public void visit(TypeDeclaration n, A file) {
+        return n.f0.accept(this, file);
      }
   
      /**
@@ -80,14 +77,14 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f4 -> ( MethodDeclaration() )*
       * f5 -> "}"
       */
-     public R visit(ClassDeclaration n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
-        n.f3.accept(this, argu);
-        n.f4.accept(this, argu);
-        n.f5.accept(this, argu);
+     public void visit(ClassDeclaration n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
+        n.f3.accept(this, file);
+        n.f4.accept(this, file);
+        n.f5.accept(this, file);
         return _ret;
      }
   
@@ -101,16 +98,16 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f6 -> ( MethodDeclaration() )*
       * f7 -> "}"
       */
-     public R visit(ClassExtendsDeclaration n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
-        n.f3.accept(this, argu);
-        n.f4.accept(this, argu);
-        n.f5.accept(this, argu);
-        n.f6.accept(this, argu);
-        n.f7.accept(this, argu);
+     public void visit(ClassExtendsDeclaration n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
+        n.f3.accept(this, file);
+        n.f4.accept(this, file);
+        n.f5.accept(this, file);
+        n.f6.accept(this, file);
+        n.f7.accept(this, file);
         return _ret;
      }
   
@@ -119,11 +116,11 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f1 -> Identifier()
       * f2 -> ";"
       */
-     public R visit(VarDeclaration n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
+     public void visit(VarDeclaration n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
         return _ret;
      }
   
@@ -142,21 +139,21 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f11 -> ";"
       * f12 -> "}"
       */
-     public R visit(MethodDeclaration n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
-        n.f3.accept(this, argu);
-        n.f4.accept(this, argu);
-        n.f5.accept(this, argu);
-        n.f6.accept(this, argu);
-        n.f7.accept(this, argu);
-        n.f8.accept(this, argu);
-        n.f9.accept(this, argu);
-        n.f10.accept(this, argu);
-        n.f11.accept(this, argu);
-        n.f12.accept(this, argu);
+     public void visit(MethodDeclaration n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
+        n.f3.accept(this, file);
+        n.f4.accept(this, file);
+        n.f5.accept(this, file);
+        n.f6.accept(this, file);
+        n.f7.accept(this, file);
+        n.f8.accept(this, file);
+        n.f9.accept(this, file);
+        n.f10.accept(this, file);
+        n.f11.accept(this, file);
+        n.f12.accept(this, file);
         return _ret;
      }
   
@@ -164,10 +161,10 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f0 -> FormalParameter()
       * f1 -> FormalParameterTail()
       */
-     public R visit(FormalParameterList n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
+     public void visit(FormalParameterList n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
         return _ret;
      }
   
@@ -175,28 +172,28 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f0 -> Type()
       * f1 -> Identifier()
       */
-     public R visit(FormalParameter n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
+     public void visit(FormalParameter n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
         return _ret;
      }
   
      /**
       * f0 -> ( FormalParameterTerm() )*
       */
-     public R visit(FormalParameterTail n, A argu) {
-        return n.f0.accept(this, argu);
+     public void visit(FormalParameterTail n, A file) {
+        return n.f0.accept(this, file);
      }
   
      /**
       * f0 -> ","
       * f1 -> FormalParameter()
       */
-     public R visit(FormalParameterTerm n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
+     public void visit(FormalParameterTerm n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
         return _ret;
      }
   
@@ -206,8 +203,8 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       *       | IntegerType()
       *       | Identifier()
       */
-     public R visit(Type n, A argu) {
-        return n.f0.accept(this, argu);
+     public void visit(Type n, A file) {
+        return n.f0.accept(this, file);
      }
   
      /**
@@ -215,26 +212,26 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f1 -> "["
       * f2 -> "]"
       */
-     public R visit(ArrayType n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
+     public void visit(ArrayType n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
         return _ret;
      }
   
      /**
       * f0 -> "boolean"
       */
-     public R visit(BooleanType n, A argu) {
-        return n.f0.accept(this, argu);
+     public void visit(BooleanType n, A file) {
+        return n.f0.accept(this, file);
      }
   
      /**
       * f0 -> "int"
       */
-     public R visit(IntegerType n, A argu) {
-        return n.f0.accept(this, argu);
+     public void visit(IntegerType n, A file) {
+        return n.f0.accept(this, file);
      }
   
      /**
@@ -245,8 +242,8 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       *       | WhileStatement()
       *       | PrintStatement()
       */
-     public R visit(Statement n, A argu) {
-        return n.f0.accept(this, argu);
+     public void visit(Statement n, A file) {
+        return n.f0.accept(this, file);
      }
   
      /**
@@ -254,11 +251,11 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f1 -> ( Statement() )*
       * f2 -> "}"
       */
-     public R visit(Block n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
+     public void visit(Block n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
         return _ret;
      }
   
@@ -268,12 +265,12 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f2 -> Expression()
       * f3 -> ";"
       */
-     public R visit(AssignmentStatement n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
-        n.f3.accept(this, argu);
+     public void visit(AssignmentStatement n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
+        n.f3.accept(this, file);
         return _ret;
      }
   
@@ -286,15 +283,15 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f5 -> Expression()
       * f6 -> ";"
       */
-     public R visit(ArrayAssignmentStatement n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
-        n.f3.accept(this, argu);
-        n.f4.accept(this, argu);
-        n.f5.accept(this, argu);
-        n.f6.accept(this, argu);
+     public void visit(ArrayAssignmentStatement n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
+        n.f3.accept(this, file);
+        n.f4.accept(this, file);
+        n.f5.accept(this, file);
+        n.f6.accept(this, file);
         return _ret;
      }
   
@@ -307,15 +304,15 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f5 -> "else"
       * f6 -> Statement()
       */
-     public R visit(IfStatement n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
-        n.f3.accept(this, argu);
-        n.f4.accept(this, argu);
-        n.f5.accept(this, argu);
-        n.f6.accept(this, argu);
+     public void visit(IfStatement n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
+        n.f3.accept(this, file);
+        n.f4.accept(this, file);
+        n.f5.accept(this, file);
+        n.f6.accept(this, file);
         return _ret;
      }
   
@@ -326,13 +323,13 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f3 -> ")"
       * f4 -> Statement()
       */
-     public R visit(WhileStatement n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
-        n.f3.accept(this, argu);
-        n.f4.accept(this, argu);
+     public void visit(WhileStatement n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
+        n.f3.accept(this, file);
+        n.f4.accept(this, file);
         return _ret;
      }
   
@@ -343,13 +340,13 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f3 -> ")"
       * f4 -> ";"
       */
-     public R visit(PrintStatement n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
-        n.f3.accept(this, argu);
-        n.f4.accept(this, argu);
+     public void visit(PrintStatement n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
+        n.f3.accept(this, file);
+        n.f4.accept(this, file);
         return _ret;
      }
   
@@ -364,8 +361,8 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       *       | MessageSend()
       *       | Clause()
       */
-     public R visit(Expression n, A argu) {
-        return n.f0.accept(this, argu);
+     public void visit(Expression n, A file) {
+        return n.f0.accept(this, file);
      }
   
      /**
@@ -373,11 +370,11 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f1 -> "&&"
       * f2 -> Clause()
       */
-     public R visit(AndExpression n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
+     public void visit(AndExpression n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
         return _ret;
      }
   
@@ -386,11 +383,11 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f1 -> "<"
       * f2 -> PrimaryExpression()
       */
-     public R visit(CompareExpression n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
+     public void visit(CompareExpression n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
         return _ret;
      }
   
@@ -399,11 +396,11 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f1 -> "+"
       * f2 -> PrimaryExpression()
       */
-     public R visit(PlusExpression n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
+     public void visit(PlusExpression n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
         return _ret;
      }
   
@@ -412,11 +409,11 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f1 -> "-"
       * f2 -> PrimaryExpression()
       */
-     public R visit(MinusExpression n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
+     public void visit(MinusExpression n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
         return _ret;
      }
   
@@ -425,11 +422,11 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f1 -> "*"
       * f2 -> PrimaryExpression()
       */
-     public R visit(TimesExpression n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
+     public void visit(TimesExpression n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
         return _ret;
      }
   
@@ -439,12 +436,12 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f2 -> PrimaryExpression()
       * f3 -> "]"
       */
-     public R visit(ArrayLookup n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
-        n.f3.accept(this, argu);
+     public void visit(ArrayLookup n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
+        n.f3.accept(this, file);
         return _ret;
      }
   
@@ -453,11 +450,11 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f1 -> "."
       * f2 -> "length"
       */
-     public R visit(ArrayLength n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
+     public void visit(ArrayLength n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
         return _ret;
      }
   
@@ -469,14 +466,14 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f4 -> ( ExpressionList() )?
       * f5 -> ")"
       */
-     public R visit(MessageSend n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
-        n.f3.accept(this, argu);
-        n.f4.accept(this, argu);
-        n.f5.accept(this, argu);
+     public void visit(MessageSend n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
+        n.f3.accept(this, file);
+        n.f4.accept(this, file);
+        n.f5.accept(this, file);
         return _ret;
      }
   
@@ -484,28 +481,28 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f0 -> Expression()
       * f1 -> ExpressionTail()
       */
-     public R visit(ExpressionList n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
+     public void visit(ExpressionList n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
         return _ret;
      }
   
      /**
       * f0 -> ( ExpressionTerm() )*
       */
-     public R visit(ExpressionTail n, A argu) {
-        return n.f0.accept(this, argu);
+     public void visit(ExpressionTail n, A file) {
+        return n.f0.accept(this, file);
      }
   
      /**
       * f0 -> ","
       * f1 -> Expression()
       */
-     public R visit(ExpressionTerm n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
+     public void visit(ExpressionTerm n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
         return _ret;
      }
   
@@ -513,8 +510,8 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f0 -> NotExpression()
       *       | PrimaryExpression()
       */
-     public R visit(Clause n, A argu) {
-        return n.f0.accept(this, argu);
+     public void visit(Clause n, A file) {
+        return n.f0.accept(this, file);
      }
   
      /**
@@ -527,43 +524,43 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       *       | AllocationExpression()
       *       | BracketExpression()
       */
-     public R visit(PrimaryExpression n, A argu) {
-        return n.f0.accept(this, argu);
+     public void visit(PrimaryExpression n, A file) {
+        return n.f0.accept(this, file);
      }
   
      /**
       * f0 -> <INTEGER_LITERAL>
       */
-     public R visit(IntegerLiteral n, A argu) {
-        return n.f0.accept(this, argu);
+     public void visit(IntegerLiteral n, A file) {
+        return n.f0.accept(this, file);
      }
   
      /**
       * f0 -> "true"
       */
-     public R visit(TrueLiteral n, A argu) {
-        return n.f0.accept(this, argu);
+     public void visit(TrueLiteral n, A file) {
+        return n.f0.accept(this, file);
      }
   
      /**
       * f0 -> "false"
       */
-     public R visit(FalseLiteral n, A argu) {
-        return n.f0.accept(this, argu);
+     public void visit(FalseLiteral n, A file) {
+        return n.f0.accept(this, file);
      }
   
      /**
       * f0 -> <IDENTIFIER>
       */
-     public R visit(Identifier n, A argu) {
-        return n.f0.accept(this, argu);
+     public void visit(Identifier n, A file) {
+        return n.f0.accept(this, file);
      }
   
      /**
       * f0 -> "this"
       */
-     public R visit(ThisExpression n, A argu) {
-        return n.f0.accept(this, argu);
+     public void visit(ThisExpression n, A file) {
+        return n.f0.accept(this, file);
      }
   
      /**
@@ -573,13 +570,13 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f3 -> Expression()
       * f4 -> "]"
       */
-     public R visit(ArrayAllocationExpression n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
-        n.f3.accept(this, argu);
-        n.f4.accept(this, argu);
+     public void visit(ArrayAllocationExpression n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
+        n.f3.accept(this, file);
+        n.f4.accept(this, file);
         return _ret;
      }
   
@@ -589,12 +586,12 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f2 -> "("
       * f3 -> ")"
       */
-     public R visit(AllocationExpression n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
-        n.f3.accept(this, argu);
+     public void visit(AllocationExpression n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
+        n.f3.accept(this, file);
         return _ret;
      }
   
@@ -602,10 +599,10 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f0 -> "!"
       * f1 -> Clause()
       */
-     public R visit(NotExpression n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
+     public void visit(NotExpression n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
         return _ret;
      }
   
@@ -614,11 +611,11 @@ public class LLVMVisitor extends GJDepthFirst<String, void> {
       * f1 -> Expression()
       * f2 -> ")"
       */
-     public R visit(BracketExpression n, A argu) {
-        R _ret=null;
-        n.f0.accept(this, argu);
-        n.f1.accept(this, argu);
-        n.f2.accept(this, argu);
+     public void visit(BracketExpression n, A file) {
+        void _ret=null;
+        n.f0.accept(this, file);
+        n.f1.accept(this, file);
+        n.f2.accept(this, file);
         return _ret;
      }
 }

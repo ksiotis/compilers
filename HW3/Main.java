@@ -3,6 +3,9 @@ import visitor.*;
 import java.io.*;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 
 public class Main {
     public static void main(String[] args) {
@@ -33,11 +36,27 @@ public class Main {
                 // get offsets
                 ClassOffsetsContainer offsets = new ClassOffsetsContainer(symbols);
                 
+                // create wanted file
+                String filename = (this.getFileName(args[i])+".ll");
+                File llfile = new File(filename);
+                if (llfile.createNewFile()) {
+                    System.out.println("File created: " + llfile.getName());
+                } else {
+                    System.out.println("File already exists.");
+                    throw new RuntimeException();
+                }
+
+                // create filewriter to pass to visitor
+                BufferedWriter out = new BufferedWriter(new FileWriter(filename));
+                
                 // setup llvm visitor
                 llvm.setOffsets(symbols, offsets);
 
-                //llvm
-                root.accept(llvm, symbols);
+                // produce ll file
+                root.accept(llvm, out);
+
+                // close writer
+                out.close();
 
                 System.out.println("File " + args[i] + " parsed successfully.");
                 System.out.println("----------------------------------------------");
@@ -55,5 +74,21 @@ public class Main {
 
         }
         System.out.println("Successfully parsed " + success + "/" + args.length + " files.");
+    }
+
+    public String getFileName(String myfile) {
+        String filename = "";
+        String[] parts = myfile.split("\\.");
+
+        for (int i = 0; i < parts.lenght() - 1; i++) {
+            filename = filename + parts[i];
+        }
+
+        if (filename != "") {
+            return filename;
+        }
+        else {
+            throw new RuntimeException();
+        }
     }
 }
