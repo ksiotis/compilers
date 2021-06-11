@@ -1,6 +1,11 @@
-public class LLVMVisitor extends GJDepthFirst<String, Integer> {
-    
-    // void setOffsets()
+public class LLVMVisitor extends GJDepthFirst<String, void> {
+    SymbolTable symbols;
+    ClassOffsetsContainer offsets;
+
+    void setOffsets(SymbolTable arg1, ClassOffsetsContainer arg2) {
+        this.symbols = arg1;
+        this.offsets = arg2;
+    }
 
     /**
     * f0 -> MainClass()

@@ -21,18 +21,23 @@ public class Main {
 
                 FillSymbolTableVisitor symb = new FillSymbolTableVisitor();
                 TypecheckVisitor types = new TypecheckVisitor();
+                LLVMVisitor llvm = new LLVMVisitor();
                 Goal root = parser.Goal();
-
+                
                 // fill symbol table
                 root.accept(symb, symbols);
-
+                
                 // typechecking
                 root.accept(types, symbols);
-
+                
                 // get offsets
                 ClassOffsetsContainer offsets = new ClassOffsetsContainer(symbols);
-
                 
+                // setup llvm visitor
+                llvm.setOffsets(symbols, offsets);
+
+                //llvm
+                root.accept(llvm, symbols);
 
                 System.out.println("File " + args[i] + " parsed successfully.");
                 System.out.println("----------------------------------------------");
