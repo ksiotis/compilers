@@ -60,11 +60,13 @@ public class FillSymbolTableVisitor extends GJDepthFirst<String, SymbolTable>{
 
         //set currentClass in symbolTable
         symbols.currentClass = myClass;
+        symbols.currentFunction = myClass.methods.get("main");
         // add variables
         n.f14.accept(this, symbols);
 
         //exit main
         symbols.currentClass = null;
+        symbols.currentFunction = null;
 
         return null;
     }

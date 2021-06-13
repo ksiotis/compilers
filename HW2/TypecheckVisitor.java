@@ -450,9 +450,6 @@ public class TypecheckVisitor extends GJDepthFirst<String, SymbolTable>{
 
         // if it is a method
         if (mymethod != null) {
-            if (symbols.currentFunction.name=="bar" && mymethod.name == "foo" && symbols.currentClass.name == "A") {
-                int a = 0;//TODO remove
-            }
 
             //handle arguments of fieldOrMethod in ExpressionList
             List<String> tempVars = new ArrayList<String>(symbols.vars);

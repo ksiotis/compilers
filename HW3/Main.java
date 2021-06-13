@@ -4,6 +4,7 @@ import java.io.*;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.io.BufferedWriter;
+import java.io.IOException;
 import java.io.File;
 import java.io.FileWriter;
 
@@ -37,7 +38,7 @@ public class Main {
                 ClassOffsetsContainer offsets = new ClassOffsetsContainer(symbols);
                 
                 // create wanted file
-                String filename = (this.getFileName(args[i])+".ll");
+                String filename = (getFileName(args[i])+".ll");
                 File llfile = new File(filename);
                 if (llfile.createNewFile()) {
                     System.out.println("File created: " + llfile.getName());
@@ -48,12 +49,13 @@ public class Main {
 
                 // create filewriter to pass to visitor
                 BufferedWriter out = new BufferedWriter(new FileWriter(filename));
-                
+
                 // setup llvm visitor
-                llvm.setOffsets(symbols, offsets);
+                llvm.setOffsets(symbols, offsets, out);
+                llvm.writeStartingLLThings(out);
 
                 // produce ll file
-                root.accept(llvm, out);
+                root.accept(llvm, null);
 
                 // close writer
                 out.close();
@@ -66,6 +68,8 @@ public class Main {
                 System.err.println(e);
             } catch (ParseException e) {
                 System.err.println(e);
+            } catch (IOException e) {
+                System.err.println(e);
             } catch (RuntimeException e) {
                 System.out.println("File " + args[i] + " not parsed successfully. Error encountered:");
                 System.out.println("\t" + e);
@@ -76,11 +80,11 @@ public class Main {
         System.out.println("Successfully parsed " + success + "/" + args.length + " files.");
     }
 
-    public String getFileName(String myfile) {
+    public static String getFileName(String myfile) {
         String filename = "";
         String[] parts = myfile.split("\\.");
 
-        for (int i = 0; i < parts.lenght() - 1; i++) {
+        for (int i = 0; i < parts.length - 1; i++) {
             filename = filename + parts[i];
         }
 
