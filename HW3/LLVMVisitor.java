@@ -13,6 +13,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
     Integer registerCounter = 0;
     Integer ifCounter = 0;
     Integer loopCounter = 0;
+    Integer randLabelCounter = 0;
     String buffer = "";
 
     public void setOffsets(SymbolTable arg1, ClassOffsetsContainer arg2, BufferedWriter arg3) {
@@ -43,14 +44,11 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
             case "int":
                 ret = "i32";
                 break;
-            case "int*":
+            case "int[]":
                 ret = "i32*";
                 break;
             case "boolean":
                 ret = "i1";
-                break;
-            case "boolean*":
-                ret = "i1*";
                 break;
             default:
                 ret = "i8*";
@@ -129,10 +127,17 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         return register;
     }
 
+    String newLabel() {
+        String label = "%Label_"+this.randLabelCounter;
+        this.randLabelCounter++;
+        return label;
+    }
+
     void resetCounters() {
         this.registerCounter = 0;
         this.ifCounter = 0;
         this.loopCounter = 0;
+        this.randLabelCounter = 0;
     }
 
     String getMethodVarType(String name) {
@@ -421,58 +426,104 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
     @Override
     public String visit(AssignmentStatement n, String argu) {
         
+        
+        String value = n.f2.accept(this, argu);
+        // if value is register load it
+        // if (value.charAt(0) == '%' && value.charAt(1) != '_' && value != "%this") { //TODO remove ?
+        if (value.charAt(0) == '%' && value.charAt(1) != '_') {
+            String register = newRegister();
+            String name = value.substring(1);
+            String type = getMethodVarType(name);
+            
+            this.buffer += "\t"+register+" = load "+LLtype(type)+", "+LLtype(type)+"* "+value+"\n";
+            value = register;
+        }
+        
         String ident = n.f0.accept(this, argu);
         String varType = getMethodVarType(ident);
+        // if not locally look in class
+        if (varType == null) {
+            varType = symbols.currentClass.fields.get(value);
+            int offset = getOffset(value);
+            String register = newRegister();
+            this.buffer += "\t"+register+" = getelementptr i8, i8* %this, i32 "+offset+"\n";
+            String register2 = newRegister();
+            this.buffer += "\t"+register2+" = bitcast i8* "+register+" to "+varType+"*"+"\n";
+            ident = register2;
+        }
+        else {
+            ident = "%"+ident;
+        }
+        this.buffer += "\tstore "+LLtype(varType)+" "+value+", "+LLtype(varType)+"* "+ident+"\n";
 
-        String targetRegister = "%"+ident;
-
-        String val = n.f2.accept(this, argu);
-
-        // // if val is local var or argument
-        // if (val.charAt(0) == '%' && val.charAt(1) != '_' && val != "%this") {
-        //     String register = newRegister();
-        //     String name = val.substring(1);
-        //     String type = getMethodVarType(name);
-            
-        //     this.buffer += "\t"+register+" = load "+type+", "+type+"* "+val+"\n";
-        //     val = register;
-        // }
-        // // if val is a statement
-        // else if (val.startsWith("%_")) {
-        //     varType = symbols.currentClass.fields.get(ident);
-        //     Integer offset = getOffset(ident);
-        //     String register = newRegister();
-        //     this.buffer += "\t"+register+" = getelementptr i8, i8* %this, i32 "+offset+"\n";
-        //     String register2 = newRegister();
-        //     this.buffer += "\t"+register2+" = bitcast i8* "+register+" to "+varType+"*\n";
-        //     ident = register2;
-        // }
-        this.buffer += "\tstore "+LLtype(varType)+" "+val+", "+LLtype(varType)+"* "+targetRegister+"\n";
-
-        return null;
+        return value;
     }
   
-   //   /**
-   //    * f0 -> Identifier()
-   //    * f1 -> "["
-   //    * f2 -> Expression()
-   //    * f3 -> "]"
-   //    * f4 -> "="
-   //    * f5 -> Expression()
-   //    * f6 -> ";"
-   //    */
-   //   public void visit(ArrayAssignmentStatement n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      n.f2.accept(this, file);
-   //      n.f3.accept(this, file);
-   //      n.f4.accept(this, file);
-   //      n.f5.accept(this, file);
-   //      n.f6.accept(this, file);
-   //      return _ret;
-   //   }
-  
+    /**
+     * f0 -> Identifier()
+    * f1 -> "["
+    * f2 -> Expression()
+    * f3 -> "]"
+    * f4 -> "="
+    * f5 -> Expression()
+    * f6 -> ";"
+    */
+    @Override
+    public String visit(ArrayAssignmentStatement n, String argu) {
+        String value = n.f0.accept(this, argu);
+        String varType = getMethodVarType(value);
+        String table = newRegister();
+        // if not locally look in class
+        if (varType == null) {
+            varType = symbols.currentClass.fields.get(value);
+            int offset = getOffset(value);
+            String register = newRegister();
+            buffer += "\t"+register+" = getelementptr i8, i8* %this, i32 "+offset+"\n";
+            String register2 = newRegister();
+            buffer += "\t"+register2+" = bitcast i8* "+register+" to "+varType+"*"+"\n";
+            buffer += "\t"+table+" = load "+varType+", "+varType+"* "+register2+"\n";
+        }
+        // else if in var just load it
+        else {
+            this.buffer += "\t"+table+" = load i32*, i32** %"+value+"\n";
+        }
+        String size = newRegister();
+        this.buffer += "\t"+size+" = load i32, i32* "+table+"\n";
+
+        String index = n.f2.accept(this, argu);
+        if (index.charAt(0) == '%' && !(index.charAt(1) == '_')) {
+            String register1 = newRegister();
+            this.buffer += "\t"+register1+" = load i32, i32* "+index+"\n";
+            index = register1;
+        }
+        
+        // OOP check
+        String oob_ok = newLabel();
+        String oob_err = newLabel();
+        String check1 = newRegister(); // 0 <= index
+        this.buffer += "\t"+check1+" = icmp sle i32 0, "+index+"\n";
+        String check2 = newRegister(); // index < size
+        this.buffer += "\t"+check2+" = icmp slt i32 "+index+", "+size+"\n";
+        String checks = newRegister();
+        this.buffer += "\t"+checks+" = and i1 "+check1+", "+check2+"\n";
+        this.buffer += "\tbr i1 "+checks+", label "+oob_ok+", label "+oob_err+"\n";
+
+        this.buffer += "\n\t"+oob_err+":\n";
+        this.buffer += "\tcall void @throw_oob()\n";
+        this.buffer += "\tbr label "+oob_ok+"\n";
+
+        this.buffer += "\n\t"+oob_ok+":\n";
+        String actualIndex = newRegister();
+        this.buffer += "\t"+actualIndex+" = add i32 1, "+index+"\n";
+        String elementPtr = newRegister();
+        this.buffer += "\t"+elementPtr+" = getelementptr i32, i32* "+table+", i32 "+actualIndex+"\n"; 
+        // store to elementPtr address
+        String tagetValue = n.f5.accept(this, argu);
+        this.buffer += "\tstore i32 "+tagetValue+", i32* "+elementPtr+"\n";
+
+        return elementPtr; //not needed but meh
+    }
+
     /**
      * f0 -> "if"
     * f1 -> "("
@@ -535,6 +586,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
     * f3 -> ")"
     * f4 -> ";"
     */
+    @Override
     public String visit(PrintStatement n, String argu) {
         String sourceRegister = n.f2.accept(this, argu);
 
@@ -560,22 +612,58 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
     *       | MessageSend()
     *       | Clause()
     */
+    @Override
     public String visit(Expression n, String argu) {
         return n.f0.accept(this, argu);
     }
   
-   //   /**
-   //    * f0 -> Clause()
-   //    * f1 -> "&&"
-   //    * f2 -> Clause()
-   //    */
-   //   public void visit(AndExpression n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      n.f2.accept(this, file);
-   //      return _ret;
-   //   }
+    /**
+     * f0 -> Clause()
+    * f1 -> "&&"
+    * f2 -> Clause()
+    */
+    @Override
+    public String visit(AndExpression n, String argu) {
+        String exp1 = n.f0.accept(this, argu);
+        // if exp1 returned register load its value
+        if (exp1.charAt(0) == '%' && !(exp1.charAt(1) == '_')) {
+            String register1 = newRegister();
+            this.buffer += "\t"+register1+" = load i1, i1* "+exp1+"\n";
+            exp1 = register1;
+        }
+
+        // Check result, short circuit if false
+        String endLablel = newLabel();
+        String endLablel_forphi = newLabel();
+        String nextLablel = newLabel();
+        String nextLablel_forphi = newLabel();
+
+        // if exp1 true continue, else jump to end
+        this.buffer += "\tbr i1 "+exp1+", label "+nextLablel+", label "+endLablel_forphi+"\n";
+        
+        this.buffer += "\n\t"+endLablel_forphi+":\n";
+        this.buffer += "\tbr label "+endLablel+":\n";
+        
+        // continue 
+        this.buffer += "\n\t"+nextLablel+":\n";
+        String exp2 = n.f2.accept(this, argu);
+        // if exp2 returned register load its value
+        if (exp2.charAt(0) == '%' && !(exp2.charAt(1) == '_')) {
+            String register2 = newRegister();
+            this.buffer += "\t"+register2+" = load i1, i1* "+exp2+"\n";
+            exp2 = register2;
+        }
+        this.buffer += "\tbr label "+nextLablel_forphi+":\n";
+
+        this.buffer += "\n\t"+nextLablel_forphi+":\n";
+        this.buffer += "\tbr label "+endLablel+":\n";
+
+        String targetRegister = newRegister();
+        this.buffer += "\n\t"+endLablel+":\n";
+        this.buffer += "\t"+targetRegister+" = phi i1  [ 0, "+endLablel_forphi+" ], [ "+exp2+", "+nextLablel_forphi+" ]\n";
+        // // this.is_bool = "yes"; //TODO remove ?
+        return targetRegister;
+    }
   
     /**
      * f0 -> PrimaryExpression()
@@ -684,52 +772,87 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         return targetRegister;
     }
   
-   //   /**
-   //    * f0 -> PrimaryExpression()
-   //    * f1 -> "["
-   //    * f2 -> PrimaryExpression()
-   //    * f3 -> "]"
-   //    */
-   //   public void visit(ArrayLookup n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      n.f2.accept(this, file);
-   //      n.f3.accept(this, file);
-   //      return _ret;
-   //   }
+    /**
+    * f0 -> PrimaryExpression()
+    * f1 -> "["
+    * f2 -> PrimaryExpression()
+    * f3 -> "]"
+    */
+    @Override
+    public String visit(ArrayLookup n, String argu) {
+        String table = n.f0.accept(this, argu);
+        if (table.charAt(0) == '%' && !(table.charAt(1) == '_')) {
+            String register1 = newRegister();
+            this.buffer += "\t"+register1+" = load i32*, i32** "+table+"\n";
+            table = register1;
+        }
+        String size = newRegister();
+        this.buffer += "\t"+size+" = load i32, i32* "+table+"\n";
+        
+        String index = n.f2.accept(this, argu);
+        if (index.charAt(0) == '%' && !(index.charAt(1) == '_')) {
+            String register1 = newRegister();
+            this.buffer += "\t"+register1+" = load i32, i32* "+index+"\n";
+            index = register1;
+        }
+        
+        // OOP check
+        String oob_ok = newLabel();
+        String oob_err = newLabel();
+        String check1 = newRegister(); // 0 <= index
+        this.buffer += "\t"+check1+" = icmp sle i32 0, "+index+"\n";
+        String check2 = newRegister(); // index < size
+        this.buffer += "\t"+check2+" = icmp slt i32 "+index+", "+size+"\n";
+        String checks = newRegister();
+        this.buffer += "\t"+checks+" = and i1 "+check1+", "+check2+"\n";
+        this.buffer += "\tbr i1 "+checks+", label "+oob_ok+", label "+oob_err+"\n";
+
+        this.buffer += "\n\t"+oob_err+":\n";
+        this.buffer += "\tcall void @throw_oob()\n";
+        this.buffer += "\tbr label "+oob_ok+"\n";
+
+        this.buffer += "\n\t"+oob_ok+":\n";
+        String actualIndex = newRegister();
+        this.buffer += "\t"+actualIndex+" = add i32 1, "+index+"\n";
+        String elementPtr = newRegister();
+        this.buffer += "\t"+elementPtr+" = getelementptr i32, i32* "+table+", i32 "+actualIndex+"\n";
+
+        String value = newRegister();
+        this.buffer += "\t"+value+" = load i32, i32* "+elementPtr+"\n";
+        return value;
+    }
+
+    /**
+     * f0 -> PrimaryExpression()
+    * f1 -> "."
+    * f2 -> "length"
+    */
+    @Override
+    public String visit(ArrayLength n, String argu) {
+        String table = n.f0.accept(this, argu);
+        if (table.charAt(0) == '%' && !(table.charAt(1) == '_')) {
+            String register1 = newRegister();
+            this.buffer += "\t"+register1+" = load i32*, i32** "+table+"\n";
+            table = register1;
+        }
+        String size = newRegister();
+        this.buffer += "\t"+size+" = load i32, i32* "+table+"\n";
+
+        return size;
+    }
   
-   //   /**
-   //    * f0 -> PrimaryExpression()
-   //    * f1 -> "."
-   //    * f2 -> "length"
-   //    */
-   //   public void visit(ArrayLength n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      n.f2.accept(this, file);
-   //      return _ret;
-   //   }
-  
-   //   /**
-   //    * f0 -> PrimaryExpression()
-   //    * f1 -> "."
-   //    * f2 -> Identifier()
-   //    * f3 -> "("
-   //    * f4 -> ( ExpressionList() )?
-   //    * f5 -> ")"
-   //    */
-   //   public void visit(MessageSend n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      n.f2.accept(this, file);
-   //      n.f3.accept(this, file);
-   //      n.f4.accept(this, file);
-   //      n.f5.accept(this, file);
-   //      return _ret;
-   //   }
+    /**
+     * f0 -> PrimaryExpression()
+     * f1 -> "."
+     * f2 -> Identifier()
+     * f3 -> "("
+     * f4 -> ( ExpressionList() )?
+     * f5 -> ")"
+     */
+    @Override
+    public String visit(MessageSend n, String argu) {
+        String ident = n.f0.accept(this, argu);
+    }
   
    //   /**
    //    * f0 -> Expression()
@@ -764,6 +887,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
      * f0 -> NotExpression()
     *       | PrimaryExpression()
     */
+    @Override
     public String visit(Clause n, String argu) {
         return n.f0.accept(this, argu);
     }
@@ -790,11 +914,11 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
                 varType = symbols.currentClass.fields.get(value);
                 int offset = getOffset(value);
                 String register = newRegister();
-                buffer += "\t"+register+" = getelementptr i8, i8* %this, i32 "+offset+"\n";
+                this.buffer += "\t"+register+" = getelementptr i8, i8* %this, i32 "+offset+"\n";
                 String register2 = newRegister();
-                buffer += "\t"+register2+" = bitcast i8* "+register+" to "+varType+"*"+"\n";
+                this.buffer += "\t"+register2+" = bitcast i8* "+register+" to "+varType+"*"+"\n";
                 String register3 = newRegister();
-                buffer += "\t"+register3+" = load "+varType+", "+varType+"* "+register2+"\n";
+                this.buffer += "\t"+register3+" = load "+varType+", "+varType+"* "+register2+"\n";
                 // if (varType = "boolean") //TODO remove?
                 //     this.is_bool = "yes";
                 return register3;
@@ -850,59 +974,107 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         return "%this";
     }
   
-   //   /**
-   //    * f0 -> "new"
-   //    * f1 -> "int"
-   //    * f2 -> "["
-   //    * f3 -> Expression()
-   //    * f4 -> "]"
-   //    */
-   //   public void visit(ArrayAllocationExpression n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      n.f2.accept(this, file);
-   //      n.f3.accept(this, file);
-   //      n.f4.accept(this, file);
-   //      return _ret;
-   //   }
+  /**
+   * f0 -> "new"
+   * f1 -> "int"
+   * f2 -> "["
+   * f3 -> Expression()
+   * f4 -> "]"
+   */
+  @Override
+  public String visit(ArrayAllocationExpression n, String argu) {
+    String exp = n.f3.accept(this, argu);
+    // if register, load its value
+    if (exp.charAt(0) == '%' && !(exp.charAt(1) == '_')) {
+        String register = newRegister();
+        this.buffer += "\t"+register+" = load i32, i32* "+exp+"\n";
+        exp = register;
+    }
+    // calculate size bytes to be allocated for the array
+    String size = newRegister();
+    this.buffer += "\t"+size+" = add "+exp+", 1\n";
+
+    // check that the size of the array is >= 1
+    String check = newRegister();
+    this.buffer += "\t"+check+" = icmp sge i32 "+size+", 1\n";
+    String okLabel = newLabel();
+    String badSizeLabel = newLabel();
+    this.buffer += "\tbr i1 "+check+", label "+okLabel+", label "+badSizeLabel+"\n";
+
+    // badSizeLabel
+    this.buffer += "\n\t"+badSizeLabel+":\n";
+    this.buffer += "\tcall void @throw_nsz()\n";
+    this.buffer += "\tbr label "+okLabel+"\n";
+
+    // okLabel
+    this.buffer += "\n\t"+okLabel+":\n";
+
+    // allocation
+    String func = newRegister();
+    this.buffer += "\t"+func+" = call i8* @calloc(i32 "+size+", i32 4)\n";
+    // cast
+    String cast = newRegister();
+    this.buffer += "\t"+cast+" = bitcast i8* "+func+" to i32*\n";
+    //store the size of the array in the first position of the array
+    this.buffer += "\tstore i32 "+size+", i32* "+cast+"\n";
+
+    return cast;
+  }
   
-   //   /**
-   //    * f0 -> "new"
-   //    * f1 -> Identifier()
-   //    * f2 -> "("
-   //    * f3 -> ")"
-   //    */
-   //   public void visit(AllocationExpression n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      n.f2.accept(this, file);
-   //      n.f3.accept(this, file);
-   //      return _ret;
-   //   }
+    /**
+     * f0 -> "new"
+    * f1 -> Identifier()
+    * f2 -> "("
+    * f3 -> ")"
+    */
+    @Override
+    public String visit(AllocationExpression n, String argu) {
+        String ident = n.f1.accept(this, argu);
+
+        // allocate the required memory on heap
+        Integer classSize = offsets.offsets.get(ident).varOffset + 8;
+        String allocate = newRegister();
+        this.buffer += "\t"+allocate+" = call i8* @calloc(i32 1, i32 "+classSize+")\n";
+
+        // set the vtable pointer to point to the correct vtable
+        String cast = newRegister();
+        this.buffer += "\t"+cast+" = bitcast i8* %_0 to i8***\n";
+        Integer methodNum = symbols.methodNum(ident);
+        String myvtable = newRegister();
+        this.buffer += "\t"+myvtable+" = getelementptr ["+methodNum+" x i8*], ["+methodNum+
+                                    " x i8*]* @."+ident+"_vtable, i32 0, i32 0\n";
+        // set the vtable to the correct address
+        this.buffer += "\tstore i8** "+myvtable+", i8*** "+cast+"\n";
+
+        return allocate;
+    }
   
-   //   /**
-   //    * f0 -> "!"
-   //    * f1 -> Clause()
-   //    */
-   //   public void visit(NotExpression n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      return _ret;
-   //   }
+    /**
+     * f0 -> "!"
+    * f1 -> Clause()
+    */
+    @Override
+    public String visit(NotExpression n, String argu) {
+        String val = n.f1.accept(this, argu);
+        // if (!c.startsWith("%_") && c.startsWith("%") && c != "%this"){ //TODO remove
+        // if register, load its value
+        if (val.charAt(0) == '%' && !(val.charAt(1) == '_')) {
+            String register = newRegister();
+            this.buffer += "\t"+register+" = load i1, i1* "+val+"\n";
+            val = register;
+        }
+        String register = newRegister();
+        this.buffer += "\t"+register+" = xor i1 1, "+val+"\n";
+        return register;
+    }
   
-   //   /**
-   //    * f0 -> "("
-   //    * f1 -> Expression()
-   //    * f2 -> ")"
-   //    */
-   //   public void visit(BracketExpression n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      n.f2.accept(this, file);
-   //      return _ret;
-   //   }
+    /**
+     * f0 -> "("
+    * f1 -> Expression()
+    * f2 -> ")"
+    */
+    @Override
+    public String visit(BracketExpression n, String argu) {
+        return n.f1.accept(this, argu);
+    }
 }

@@ -29,4 +29,28 @@ public class SymbolTable {
 
         return classOffsets;
     }
+
+    Integer fieldNum(String name) {
+        Integer count = 0;
+
+        ClassTable tarClass = this.classes.get(name);
+        while (tarClass != null) {
+            count += tarClass.fields.size();
+            tarClass = tarClass.parent;
+        }
+
+        return count;
+    }
+
+    Integer methodNum(String name) {
+        Integer count = 0;
+
+        ClassTable tarClass = this.classes.get(name);
+        while (tarClass != null) {
+            count += tarClass.methods.size();
+            tarClass = tarClass.parent;
+        }
+
+        return count;
+    }
 }
