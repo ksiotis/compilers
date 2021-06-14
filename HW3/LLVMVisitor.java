@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 
 public class LLVMVisitor extends GJDepthFirst<String, String> {
     SymbolTable symbols;
@@ -15,6 +16,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
     Integer loopCounter = 0;
     Integer randLabelCounter = 0;
     String buffer = "";
+    ArrayList<String> parameters = new ArrayList<String>();
 
     public void setOffsets(SymbolTable arg1, ClassOffsetsContainer arg2, BufferedWriter arg3) {
         this.symbols = arg1;
@@ -161,6 +163,29 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         return (myOffset != null && myOffset >= 0) ? myOffset : -1;
     }
 
+    public Integer getMethodOffset(String className, String methodName) {
+        ClassTable currentClass = symbols.classes.get(className);
+        while (currentClass != null) {
+            Integer ret = offsets.offsets.get(currentClass.name).methodOffsets.get(methodName);
+            if (ret != null) {
+                return ret;
+            }
+            currentClass = currentClass.parent;
+        }
+        return -1;
+    }
+
+    public Integer getVarOffset(String className, String varName) {
+        ClassTable currentClass = symbols.classes.get(className);
+        while (currentClass != null) {
+            Integer ret = offsets.offsets.get(currentClass.name).variableOffsets.get(varName);
+            if (ret != null) {
+                return ret;
+            }
+            currentClass = currentClass.parent;
+        }
+        return -1;
+    }
 
     /**
     * f0 -> MainClass()
@@ -851,37 +876,96 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
      */
     @Override
     public String visit(MessageSend n, String argu) {
-        String ident = n.f0.accept(this, argu);
+        String object = n.f0.accept(this, argu);
+        String objectName = object.substring(1);
+        String objectType = getMethodVarType(objectName);
+
+        // if a class or a var or a register, load its value
+        if (objectType != null && object.charAt(0) == '%' && !(object.charAt(1) == '_')) {
+            String register1 = newRegister();
+            this.buffer += "\t"+register1+" = load "+LLtype(objectType)+", "+LLtype(objectType)+"* "+object+"\n";
+            object = register1;
+        }
+        // else { // get class field <- not needed, here it can only be a method }
+
+        String objMethod = n.f2.accept(this, argu);
+
+        this.parameters.clear();
+        if (n.f4.present()) {
+            n.f4.accept(this, argu); // will load parameters
+        }
+
+        Integer offset = symbols.getOffsets().get(objectType).methodOffsets.get(objMethod);
+        this.buffer += "\t; "+objectType+"."+objMethod+" : "+offset+"\n"; //TODO remove
+
+        // Do the required bitcasts, so that we can access the vtable pointer
+        String cast = newRegister();
+        this.buffer += "\t"+cast+" = bitcast i8* "+object+" to i8***\n";
+        // Load vtable_ptr
+        String vtable_ptr = newRegister();
+        this.buffer += "\t"+vtable_ptr+" = load i8**, i8*** "+cast+"\n";
+        String elementPtr = newRegister();
+        this.buffer += "\t"+elementPtr+" = getelementptr i8*, i8** "+vtable_ptr+", i32 "+offset+"\n";
+        String actualPointer = newRegister();
+        this.buffer += "\t"+actualPointer+" = load i8*, i8** "+elementPtr+"\n";
+        // Cast the function pointer from i8* to a function ptr type that matches its signature.
+        String cast2 = newRegister();
+        String methodType = symbols.classes.get(objectType).methods.get(objMethod).type;
+        String paramTypes = "";
+        for (String type : symbols.classes.get(objectType).methods.get(objMethod).args.values()) {
+            paramTypes += ","+LLtype(type);
+        }
+        this.buffer += "\t"+cast2+" = bitcast i8* "+actualPointer+" to "+LLtype(methodType)+" (i8*"+paramTypes+")*\n";
+        //load values of parameters
+        String callParams = "";
+        String[] paramTypesArray = paramTypes.split(",");
+        for (int i = 0; i < this.parameters.size(); i++) {
+            String param = this.parameters.get(i);
+            if (param.charAt(0) == '%' && !(param.charAt(1) == '_') && param != "%this") {
+                String paramReg = newRegister();
+                this.buffer += "\t"+paramReg+" = load "+LLtype(paramTypesArray[i])+", "+LLtype(paramTypesArray[i+1])+"* "+param+"\n"; // small hack because of split(",")
+                param = paramReg;
+            }
+
+            callParams += ", "+paramTypesArray[i+1]+" "+param; // small hack because of split(",")
+        }
+        // Perform the call
+        String call = newRegister();
+        this.buffer += "\t"+call+" = call "+LLtype(methodType)+" "+cast2+"(i8* "+object+callParams+")\n";
+
+        return call;
     }
   
-   //   /**
-   //    * f0 -> Expression()
-   //    * f1 -> ExpressionTail()
-   //    */
-   //   public void visit(ExpressionList n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      return _ret;
-   //   }
+    /**
+     * f0 -> Expression()
+     * f1 -> ExpressionTail()
+     */
+    @Override
+    public String visit(ExpressionList n, String argu) {
+        String exp = n.f0.accept(this, argu);
+        this.parameters.add(exp);
+        n.f1.accept(this, argu);
+        return argu;
+    }
   
-   //   /**
-   //    * f0 -> ( ExpressionTerm() )*
-   //    */
-   //   public void visit(ExpressionTail n, String argu) {
-   //      return n.f0.accept(this, file);
-   //   }
+    /**
+     * f0 -> ( ExpressionTerm() )*
+    */
+    @Override
+    public String visit(ExpressionTail n, String argu) {
+        String exp = n.f0.accept(this, argu);
+        if (exp != null) this.parameters.add(exp);
+        return argu;
+    }
   
-   //   /**
-   //    * f0 -> ","
-   //    * f1 -> Expression()
-   //    */
-   //   public void visit(ExpressionTerm n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      return _ret;
-   //   }
+    /**
+     * f0 -> ","
+     * f1 -> Expression()
+     */
+    @Override
+    public String visit(ExpressionTerm n, String argu) {
+        return n.f0.accept(this, argu);
+    }
   
     /**
      * f0 -> NotExpression()
@@ -1038,8 +1122,8 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 
         // set the vtable pointer to point to the correct vtable
         String cast = newRegister();
-        this.buffer += "\t"+cast+" = bitcast i8* %_0 to i8***\n";
-        Integer methodNum = symbols.methodNum(ident);
+        this.buffer += "\t"+cast+" = bitcast i8* "+allocate+" to i8***\n";
+        Integer methodNum = offsets.offsets.get(ident).methodOffset / 8;
         String myvtable = newRegister();
         this.buffer += "\t"+myvtable+" = getelementptr ["+methodNum+" x i8*], ["+methodNum+
                                     " x i8*]* @."+ident+"_vtable, i32 0, i32 0\n";
