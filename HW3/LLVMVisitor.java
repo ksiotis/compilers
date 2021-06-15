@@ -532,7 +532,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
             }
             int offset = getVarOffset(symbols.currentClass.name, ident);
             String register = newRegister();
-            this.buffer += "\t"+register+" = getelementptr i8, i8* %this, i32 "+(offset+8)+"\n";
+            this.buffer += "\t"+register+" = getelementptr i8, i8* %this, i32 "+(offset/8)+"\n";
             String register2 = newRegister();
             this.buffer += "\t"+register2+" = bitcast i8* "+register+" to "+LLtype(varType)+"*"+"\n";
             ident = register2;
@@ -682,7 +682,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         n.f4.accept(this, argu);
 
         // jump back
-        this.buffer += "\t br label %"+loopStart+"\n";
+        this.buffer += "\tbr label %"+loopStart+"\n";
 
         // after loop
         this.buffer += "\n\t"+loopEnd+":\n";
@@ -753,7 +753,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         this.buffer += "\tbr i1 "+exp1+", label %"+nextLablel+", label %"+endLablel_forphi+"\n";
         
         this.buffer += "\n\t"+endLablel_forphi+":\n";
-        this.buffer += "\tbr label %"+endLablel+":\n";
+        this.buffer += "\tbr label %"+endLablel+"\n";
         
         // continue 
         this.buffer += "\n\t"+nextLablel+":\n";
@@ -764,10 +764,10 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
             this.buffer += "\t"+register2+" = load i1, i1* "+exp2+"\n";
             exp2 = register2;
         }
-        this.buffer += "\tbr label %"+nextLablel_forphi+":\n";
+        this.buffer += "\tbr label %"+nextLablel_forphi+"\n";
 
         this.buffer += "\n\t"+nextLablel_forphi+":\n";
-        this.buffer += "\tbr label %"+endLablel+":\n";
+        this.buffer += "\tbr label %"+endLablel+"\n";
 
         String targetRegister = newRegister();
         this.buffer += "\n\t"+endLablel+":\n";
@@ -1096,7 +1096,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
                 }
                 int offset = getVarOffset(symbols.currentClass.name, value);
                 String register = newRegister();
-                this.buffer += "\t"+register+" = getelementptr i8, i8* %this, i32 "+(offset+8)+"\n";
+                this.buffer += "\t"+register+" = getelementptr i8, i8* %this, i32 "+(offset/8)+"\n";
                 String register2 = newRegister();
                 this.buffer += "\t"+register2+" = bitcast i8* "+register+" to "+LLtype(varType)+"*"+"\n";
                 String register3 = newRegister();
