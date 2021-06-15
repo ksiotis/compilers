@@ -772,7 +772,6 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         String targetRegister = newRegister();
         this.buffer += "\n\t"+endLablel+":\n";
         this.buffer += "\t"+targetRegister+" = phi i1  [ 0, %"+endLablel_forphi+" ], [ "+exp2+", %"+nextLablel_forphi+" ]\n";
-        // // this.is_bool = "yes"; //TODO remove ?
         return targetRegister;
     }
   
@@ -799,7 +798,6 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 
         String targetRegister = newRegister();
         this.buffer += "\t"+targetRegister+" = icmp slt i32 "+exp1+", "+exp2+"\n";
-        // this.is_bool = "yes"; //TODO remove ?
         return targetRegister;
     }
   
@@ -852,7 +850,6 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 
         String targetRegister = newRegister();
         this.buffer += "\t"+targetRegister+" = sub i32 "+exp1+", "+exp2+"\n";
-        // this.is_bool = "no"; //TODO remove ?
         return targetRegister;
     }
   
@@ -879,7 +876,6 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
 
         String targetRegister = newRegister();
         this.buffer += "\t"+targetRegister+" = mul i32 "+exp1+", "+exp2+"\n";
-        // this.is_bool = "no"; //TODO remove ?
         return targetRegister;
     }
   
@@ -988,7 +984,6 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         }
 
         Integer offset = symbols.getOffsets().get(objectType).methodOffsets.get(objMethod);
-        this.buffer += "\t; "+objectType+"."+objMethod+" : "+offset+"\n"; //TODO remove
 
         // Do the required bitcasts, so that we can access the vtable pointer
         String cast = newRegister();
@@ -1083,7 +1078,6 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         String value = n.f0.accept(this, argu);
         // if it is an identifier, return its register
         if (n.f0.which == 3) {
-            // this.ident = r; //TODO remove?
             String varType = getMethodVarType(value);
             //if value is not a local var or argument
             if (varType == null) {
@@ -1101,13 +1095,9 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
                 this.buffer += "\t"+register2+" = bitcast i8* "+register+" to "+LLtype(varType)+"*"+"\n";
                 String register3 = newRegister();
                 this.buffer += "\t"+register3+" = load "+LLtype(varType)+", "+LLtype(varType)+"* "+register2+"\n";
-                // if (varType = "boolean") //TODO remove?
-                //     this.is_bool = "yes";
                 return register3;
             }
             else {
-                // if (varType == "boolean") //TODO remove?
-                //     this.is_bool = "yes";
                 return "%"+value;
             }
         }
@@ -1241,7 +1231,6 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
     @Override
     public String visit(NotExpression n, String argu) {
         String val = n.f1.accept(this, argu);
-        // if (!c.startsWith("%_") && c.startsWith("%") && c != "%this"){ //TODO remove
         // if register, load its value
         if (val.charAt(0) == '%' && !(val.charAt(1) == '_')) {
             String register = newRegister();
