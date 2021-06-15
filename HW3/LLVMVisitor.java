@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 
 public class LLVMVisitor extends GJDepthFirst<String, String> {
     SymbolTable symbols;
@@ -16,6 +17,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
     Integer randLabelCounter = 0;
     String buffer = "";
     ArrayList<String> parameters = new ArrayList<String>();
+    String targetClass = null;
 
     public void setOffsets(SymbolTable arg1, ClassOffsetsContainer arg2, BufferedWriter arg3) {
         this.symbols = arg1;
@@ -61,19 +63,18 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
     void writeStartingLLThings(BufferedWriter file) {
         for (Map.Entry<String, ClassTable> entry : this.symbols.classes.entrySet()) {
             String className = entry.getKey();
-            Integer methodsNum = entry.getValue().methods.size();
-            
-            if (entry.getValue().methods.keySet().contains("main")) methodsNum -= 1;
+            Integer methodsNum = offsets.offsets.get(className).methodOffset / 8;
 
             String strMethods = "";
+            LinkedList<String> addedMethods = new LinkedList<String>(); 
             // for each method
             for (Map.Entry<String, FunctionTable> method : entry.getValue().methods.entrySet()) {
-                // skip main
-                if (method.getKey() == "main") continue;
-
                 //get type
                 String methodType = LLtype(method.getValue().type);
                 String methodName = method.getKey();
+
+                // skip main
+                if (methodName == "main") continue;
 
                 String strArgs = "i8*";
                 for (String arg : method.getValue().args.values()) {
@@ -82,6 +83,32 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
                 
                 strMethods += "i8* bitcast ("+methodType+" ("+strArgs+")* @"+
                                     className+"."+methodName+" to i8*), ";
+
+                addedMethods.add(methodName);
+            }
+            // add methods of parents
+            ClassTable currentParent = entry.getValue().parent;
+            while (currentParent != null) {
+                for (Map.Entry<String, FunctionTable> method : currentParent.methods.entrySet()) {
+                    //get type
+                    String methodType = LLtype(method.getValue().type);
+                    String methodName = method.getKey();
+
+                    // skip main or already added
+                    if (addedMethods.contains(methodName) || methodName == "main") continue;
+
+                    String strArgs = "i8*";
+                    for (String arg : method.getValue().args.values()) {
+                        strArgs += "," + LLtype(arg);
+                    }
+                    
+                    strMethods += "i8* bitcast ("+methodType+" ("+strArgs+")* @"+
+                                currentParent.name+"."+methodName+" to i8*), ";
+    
+                    addedMethods.add(methodName);
+
+                    currentParent = currentParent.parent;
+                }
             }
             //remove trailing ", "
             if (strMethods.length() > 0)
@@ -92,7 +119,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
             emit(file, line);
         }
         emit(file,
-            "declare i8* @calloc(i32, i32)\n"+
+            "\ndeclare i8* @calloc(i32, i32)\n"+
             "declare i32 @printf(i8*, ...)\n"+
             "declare void @exit(i32)\n"+
             "\n"+
@@ -129,7 +156,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
     }
 
     String newLabel() {
-        String label = "%Label_"+this.randLabelCounter;
+        String label = "Label_"+this.randLabelCounter;
         this.randLabelCounter++;
         return label;
     }
@@ -263,23 +290,28 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         String className = n.f1.accept(this, argu);
         symbols.currentClass = symbols.classes.get(className);
         n.f4.accept(this, argu);
+        symbols.currentClass = null;
         return argu;
     }
   
-    // /**
-    //  * f0 -> "class"
-    //  * f1 -> Identifier()
-    //  * f2 -> "extends"
-    //  * f3 -> Identifier()
-    //  * f4 -> "{"
-    //  * f5 -> ( VarDeclaration() )*
-    //  * f6 -> ( MethodDeclaration() )*
-    //  * f7 -> "}"
-    //  */
-    // @Override
-    // public String visit(ClassExtendsDeclaration n, String argu) {
-
-    // }
+    /**
+     * f0 -> "class"
+     * f1 -> Identifier()
+     * f2 -> "extends"
+     * f3 -> Identifier()
+     * f4 -> "{"
+     * f5 -> ( VarDeclaration() )*
+     * f6 -> ( MethodDeclaration() )*
+     * f7 -> "}"
+     */
+    @Override
+    public String visit(ClassExtendsDeclaration n, String argu) {
+        String className = n.f1.accept(this, argu);
+        symbols.currentClass = symbols.classes.get(className);
+        n.f6.accept(this, argu);
+        symbols.currentClass = null;
+        return argu;
+    }
 
    /**
     * f0 -> Type()
@@ -290,7 +322,9 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
     public String visit(VarDeclaration n, String argu) {
         String type = n.f0.accept(this, argu);
         String name = n.f1.accept(this, argu);
-        
+
+
+
         buffer += "\t%"+name+" = alloca "+LLtype(type)+"\n";
         return null;
     }
@@ -450,18 +484,15 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         return n.f0.accept(this, argu);
     }
   
-   //   /**
-   //    * f0 -> "{"
-   //    * f1 -> ( Statement() )*
-   //    * f2 -> "}"
-   //    */
-   //   public void visit(Block n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      n.f2.accept(this, file);
-   //      return _ret;
-   //   }
+    /**
+     * f0 -> "{"
+     * f1 -> ( Statement() )*
+     * f2 -> "}"
+     */
+    @Override
+    public String visit(Block n, String argu) {
+        return n.f1.accept(this, argu);
+    }
   
     /**
      * f0 -> Identifier()
@@ -475,11 +506,14 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         
         String value = n.f2.accept(this, argu);
         // if value is register load it
-        // if (value.charAt(0) == '%' && value.charAt(1) != '_' && value != "%this") { //TODO remove ?
         if (value.charAt(0) == '%' && value.charAt(1) != '_') {
             String register = newRegister();
             String name = value.substring(1);
             String type = getMethodVarType(name);
+
+            if (value == "%this") {
+                type = symbols.currentClass.name;
+            }
             
             this.buffer += "\t"+register+" = load "+LLtype(type)+", "+LLtype(type)+"* "+value+"\n";
             value = register;
@@ -489,8 +523,14 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         String varType = getMethodVarType(ident);
         // if not locally look in class
         if (varType == null) {
-            varType = symbols.currentClass.fields.get(ident);
-            int offset = getOffset(ident);
+            ClassTable currentClassLookup = symbols.currentClass;
+            while (currentClassLookup != null) {
+                varType = currentClassLookup.fields.get(ident);
+                if (varType != null) break;
+
+                currentClassLookup = currentClassLookup.parent;
+            }
+            int offset = getVarOffset(symbols.currentClass.name, ident);
             String register = newRegister();
             this.buffer += "\t"+register+" = getelementptr i8, i8* %this, i32 "+(offset+8)+"\n";
             String register2 = newRegister();
@@ -526,8 +566,8 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
             String register = newRegister();
             buffer += "\t"+register+" = getelementptr i8, i8* %this, i32 "+offset+"\n";
             String register2 = newRegister();
-            buffer += "\t"+register2+" = bitcast i8* "+register+" to "+varType+"*"+"\n";
-            buffer += "\t"+table+" = load "+varType+", "+varType+"* "+register2+"\n";
+            buffer += "\t"+register2+" = bitcast i8* "+register+" to "+LLtype(varType)+"*"+"\n";
+            buffer += "\t"+table+" = load "+LLtype(varType)+", "+LLtype(varType)+"* "+register2+"\n";
         }
         // else if in var just load it
         else {
@@ -552,11 +592,11 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         this.buffer += "\t"+check2+" = icmp slt i32 "+index+", "+size+"\n";
         String checks = newRegister();
         this.buffer += "\t"+checks+" = and i1 "+check1+", "+check2+"\n";
-        this.buffer += "\tbr i1 "+checks+", label "+oob_ok+", label "+oob_err+"\n";
+        this.buffer += "\tbr i1 "+checks+", label %"+oob_ok+", label %"+oob_err+"\n";
 
         this.buffer += "\n\t"+oob_err+":\n";
         this.buffer += "\tcall void @throw_oob()\n";
-        this.buffer += "\tbr label "+oob_ok+"\n";
+        this.buffer += "\tbr label %"+oob_ok+"\n";
 
         this.buffer += "\n\t"+oob_ok+":\n";
         String actualIndex = newRegister();
@@ -584,7 +624,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         String exp = n.f2.accept(this, argu);
         String targetRegister = exp;
         
-        if (exp.charAt(0) == '%' && !(exp.charAt(1) == '_')) {
+        if (exp.charAt(0) == '%' && exp.charAt(1) != '_') {
             targetRegister = newRegister();
             this.buffer += "\t"+targetRegister+" = load i1, i1* "+exp+"\n";
         }
@@ -608,22 +648,47 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         return null;
     }
   
-   //   /**
-   //    * f0 -> "while"
-   //    * f1 -> "("
-   //    * f2 -> Expression()
-   //    * f3 -> ")"
-   //    * f4 -> Statement()
-   //    */
-   //   public void visit(WhileStatement n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      n.f2.accept(this, file);
-   //      n.f3.accept(this, file);
-   //      n.f4.accept(this, file);
-   //      return _ret;
-   //   }
+    /**
+     * f0 -> "while"
+    * f1 -> "("
+    * f2 -> Expression()
+    * f3 -> ")"
+    * f4 -> Statement()
+    */
+    @Override
+    public String visit(WhileStatement n, String argu) {
+        String loopStart = "Loop_Start_"+this.loopCounter;
+        String loopBody = "Loop_Body_"+this.loopCounter;
+        String loopEnd = "Loop_End_"+this.loopCounter;
+        this.loopCounter += 1;
+
+        // jump to starting label
+        this.buffer += "\tbr label %"+loopStart+"\n";
+
+        // expression
+        this.buffer += "\n\t"+loopStart+":\n";
+        String exp = n.f2.accept(this, argu);
+        if (exp.charAt(0) == '%' && exp.charAt(1) != '_') {
+            String register = newRegister();
+           this.buffer += "\t"+register+" = load i1, i1* "+exp;
+            exp = register;
+        }
+
+        // conditional jump
+        this.buffer += "\tbr i1 "+exp+", label %"+loopBody+", label %"+loopEnd+"\n";
+
+        // body
+        this.buffer += "\n\t"+loopBody+":\n";
+        n.f4.accept(this, argu);
+
+        // jump back
+        this.buffer += "\t br label %"+loopStart+"\n";
+
+        // after loop
+        this.buffer += "\n\t"+loopEnd+":\n";
+
+        return argu;
+    }
   
     /**
      * f0 -> "System.out.println"
@@ -685,10 +750,10 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         String nextLablel_forphi = newLabel();
 
         // if exp1 true continue, else jump to end
-        this.buffer += "\tbr i1 "+exp1+", label "+nextLablel+", label "+endLablel_forphi+"\n";
+        this.buffer += "\tbr i1 "+exp1+", label %"+nextLablel+", label %"+endLablel_forphi+"\n";
         
         this.buffer += "\n\t"+endLablel_forphi+":\n";
-        this.buffer += "\tbr label "+endLablel+":\n";
+        this.buffer += "\tbr label %"+endLablel+":\n";
         
         // continue 
         this.buffer += "\n\t"+nextLablel+":\n";
@@ -699,14 +764,14 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
             this.buffer += "\t"+register2+" = load i1, i1* "+exp2+"\n";
             exp2 = register2;
         }
-        this.buffer += "\tbr label "+nextLablel_forphi+":\n";
+        this.buffer += "\tbr label %"+nextLablel_forphi+":\n";
 
         this.buffer += "\n\t"+nextLablel_forphi+":\n";
-        this.buffer += "\tbr label "+endLablel+":\n";
+        this.buffer += "\tbr label %"+endLablel+":\n";
 
         String targetRegister = newRegister();
         this.buffer += "\n\t"+endLablel+":\n";
-        this.buffer += "\t"+targetRegister+" = phi i1  [ 0, "+endLablel_forphi+" ], [ "+exp2+", "+nextLablel_forphi+" ]\n";
+        this.buffer += "\t"+targetRegister+" = phi i1  [ 0, %"+endLablel_forphi+" ], [ "+exp2+", %"+nextLablel_forphi+" ]\n";
         // // this.is_bool = "yes"; //TODO remove ?
         return targetRegister;
     }
@@ -851,11 +916,11 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         this.buffer += "\t"+check2+" = icmp slt i32 "+index+", "+size+"\n";
         String checks = newRegister();
         this.buffer += "\t"+checks+" = and i1 "+check1+", "+check2+"\n";
-        this.buffer += "\tbr i1 "+checks+", label "+oob_ok+", label "+oob_err+"\n";
+        this.buffer += "\tbr i1 "+checks+", label %"+oob_ok+", label %"+oob_err+"\n";
 
         this.buffer += "\n\t"+oob_err+":\n";
         this.buffer += "\tcall void @throw_oob()\n";
-        this.buffer += "\tbr label "+oob_ok+"\n";
+        this.buffer += "\tbr label %"+oob_ok+"\n";
 
         this.buffer += "\n\t"+oob_ok+":\n";
         String actualIndex = newRegister();
@@ -907,7 +972,13 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
             this.buffer += "\t"+register1+" = load "+LLtype(objectType)+", "+LLtype(objectType)+"* "+object+"\n";
             object = register1;
         }
-        // else { // get class field <- not needed, here it can only be a method }
+        else if (object.startsWith("%_")) {
+            objectType = this.targetClass;
+            this.targetClass = null;
+        }
+        else if (object == "%this") {
+            objectType = symbols.currentClass.name;
+        }
 
         String objMethod = n.f2.accept(this, argu);
 
@@ -944,7 +1015,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
             String param = this.parameters.get(i);
             if (param.charAt(0) == '%' && !(param.charAt(1) == '_') && param != "%this") {
                 String paramReg = newRegister();
-                this.buffer += "\t"+paramReg+" = load "+LLtype(paramTypesArray[i])+", "+LLtype(paramTypesArray[i+1])+"* "+param+"\n"; // small hack because of split(",")
+                this.buffer += "\t"+paramReg+" = load "+paramTypesArray[i+1]+", "+paramTypesArray[i+1]+"* "+param+"\n"; // small hack because of split(",")
                 param = paramReg;
             }
 
@@ -1016,7 +1087,13 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
             String varType = getMethodVarType(value);
             //if value is not a local var or argument
             if (varType == null) {
-                varType = symbols.currentClass.fields.get(value);
+                ClassTable currentClassLookup = symbols.currentClass;
+                while (currentClassLookup != null) {
+                    varType = currentClassLookup.fields.get(value);
+                    if (varType != null) break;
+    
+                    currentClassLookup = currentClassLookup.parent;
+                }
                 int offset = getVarOffset(symbols.currentClass.name, value);
                 String register = newRegister();
                 this.buffer += "\t"+register+" = getelementptr i8, i8* %this, i32 "+(offset+8)+"\n";
@@ -1090,26 +1167,26 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
   public String visit(ArrayAllocationExpression n, String argu) {
     String exp = n.f3.accept(this, argu);
     // if register, load its value
-    if (exp.charAt(0) == '%' && !(exp.charAt(1) == '_')) {
+    if (exp.charAt(0) == '%' && exp.charAt(1) != '_') {
         String register = newRegister();
         this.buffer += "\t"+register+" = load i32, i32* "+exp+"\n";
         exp = register;
     }
     // calculate size bytes to be allocated for the array
     String size = newRegister();
-    this.buffer += "\t"+size+" = add "+exp+", 1\n";
+    this.buffer += "\t"+size+" = add i32 "+exp+", 1\n";
 
     // check that the size of the array is >= 1
     String check = newRegister();
     this.buffer += "\t"+check+" = icmp sge i32 "+size+", 1\n";
     String okLabel = newLabel();
     String badSizeLabel = newLabel();
-    this.buffer += "\tbr i1 "+check+", label "+okLabel+", label "+badSizeLabel+"\n";
+    this.buffer += "\tbr i1 "+check+", label %"+okLabel+", label %"+badSizeLabel+"\n";
 
     // badSizeLabel
     this.buffer += "\n\t"+badSizeLabel+":\n";
     this.buffer += "\tcall void @throw_nsz()\n";
-    this.buffer += "\tbr label "+okLabel+"\n";
+    this.buffer += "\tbr label %"+okLabel+"\n";
 
     // okLabel
     this.buffer += "\n\t"+okLabel+":\n";
@@ -1121,7 +1198,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
     String cast = newRegister();
     this.buffer += "\t"+cast+" = bitcast i8* "+func+" to i32*\n";
     //store the size of the array in the first position of the array
-    this.buffer += "\tstore i32 "+size+", i32* "+cast+"\n";
+    this.buffer += "\tstore i32 "+exp+", i32* "+cast+"\n";
 
     return cast;
   }
@@ -1150,6 +1227,9 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
                                     " x i8*]* @."+ident+"_vtable, i32 0, i32 0\n";
         // set the vtable to the correct address
         this.buffer += "\tstore i8** "+myvtable+", i8*** "+cast+"\n";
+
+        // set the targetClass
+        this.targetClass = ident;
 
         return allocate;
     }
