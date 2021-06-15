@@ -17,6 +17,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
     Integer randLabelCounter = 0;
     String buffer = "";
     ArrayList<String> parameters = new ArrayList<String>();
+    String resposeType = null;
 
     public void setOffsets(SymbolTable arg1, ClassOffsetsContainer arg2, BufferedWriter arg3) {
         this.symbols = arg1;
@@ -242,55 +243,45 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         return null;
     }
   
-   //   /**
-   //    * f0 -> ClassDeclaration()
-   //    *       | ClassExtendsDeclaration()
-   //    */
-   //   public void visit(TypeDeclaration n, String argu) {
-   //      return n.f0.accept(this, file);
-   //   }
+    /**
+     * f0 -> ClassDeclaration()
+    *       | ClassExtendsDeclaration()
+    */
+    @Override
+    public String visit(TypeDeclaration n, String argu) {
+        return n.f0.accept(this, argu);
+    }
   
-   //   /**
-   //    * f0 -> "class"
-   //    * f1 -> Identifier()
-   //    * f2 -> "{"
-   //    * f3 -> ( VarDeclaration() )*
-   //    * f4 -> ( MethodDeclaration() )*
-   //    * f5 -> "}"
-   //    */
-   //   public void visit(ClassDeclaration n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      n.f2.accept(this, file);
-   //      n.f3.accept(this, file);
-   //      n.f4.accept(this, file);
-   //      n.f5.accept(this, file);
-   //      return _ret;
-   //   }
+    /**
+     * f0 -> "class"
+     * f1 -> Identifier()
+     * f2 -> "{"
+     * f3 -> ( VarDeclaration() )*
+     * f4 -> ( MethodDeclaration() )*
+     * f5 -> "}"
+     */
+    @Override
+    public String visit(ClassDeclaration n, String argu) {
+        String className = n.f1.accept(this, argu);
+        symbols.currentClass = symbols.classes.get(className);
+        n.f4.accept(this, argu);
+        return argu;
+    }
   
-   //   /**
-   //    * f0 -> "class"
-   //    * f1 -> Identifier()
-   //    * f2 -> "extends"
-   //    * f3 -> Identifier()
-   //    * f4 -> "{"
-   //    * f5 -> ( VarDeclaration() )*
-   //    * f6 -> ( MethodDeclaration() )*
-   //    * f7 -> "}"
-   //    */
-   //   public void visit(ClassExtendsDeclaration n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      n.f2.accept(this, file);
-   //      n.f3.accept(this, file);
-   //      n.f4.accept(this, file);
-   //      n.f5.accept(this, file);
-   //      n.f6.accept(this, file);
-   //      n.f7.accept(this, file);
-   //      return _ret;
-   //   }
+    // /**
+    //  * f0 -> "class"
+    //  * f1 -> Identifier()
+    //  * f2 -> "extends"
+    //  * f3 -> Identifier()
+    //  * f4 -> "{"
+    //  * f5 -> ( VarDeclaration() )*
+    //  * f6 -> ( MethodDeclaration() )*
+    //  * f7 -> "}"
+    //  */
+    // @Override
+    // public String visit(ClassExtendsDeclaration n, String argu) {
+
+    // }
 
    /**
     * f0 -> Type()
@@ -306,78 +297,110 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         return null;
     }
   
-   //   /**
-   //    * f0 -> "public"
-   //    * f1 -> Type()
-   //    * f2 -> Identifier()
-   //    * f3 -> "("
-   //    * f4 -> ( FormalParameterList() )?
-   //    * f5 -> ")"
-   //    * f6 -> "{"
-   //    * f7 -> ( VarDeclaration() )*
-   //    * f8 -> ( Statement() )*
-   //    * f9 -> "return"
-   //    * f10 -> Expression()
-   //    * f11 -> ";"
-   //    * f12 -> "}"
-   //    */
-   //   public void visit(MethodDeclaration n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      n.f2.accept(this, file);
-   //      n.f3.accept(this, file);
-   //      n.f4.accept(this, file);
-   //      n.f5.accept(this, file);
-   //      n.f6.accept(this, file);
-   //      n.f7.accept(this, file);
-   //      n.f8.accept(this, file);
-   //      n.f9.accept(this, file);
-   //      n.f10.accept(this, file);
-   //      n.f11.accept(this, file);
-   //      n.f12.accept(this, file);
-   //      return _ret;
-   //   }
+    /**
+     * f0 -> "public"
+    * f1 -> Type()
+    * f2 -> Identifier()
+    * f3 -> "("
+    * f4 -> ( FormalParameterList() )?
+    * f5 -> ")"
+    * f6 -> "{"
+    * f7 -> ( VarDeclaration() )*
+    * f8 -> ( Statement() )*
+    * f9 -> "return"
+    * f10 -> Expression()
+    * f11 -> ";"
+    * f12 -> "}"
+    */
+    @Override
+    public String visit(MethodDeclaration n, String argu) {
+        resetCounters();
+        String type = n.f1.accept(this, argu);
+        String ident = n.f2.accept(this, argu);
+        symbols.currentFunction = symbols.currentClass.methods.get(ident);
+
+        // get parameters
+        this.parameters.clear();
+        n.f4.accept(this, argu);
+        String params = "";
+        for (int i = 0; i < this.parameters.size(); i++) {
+            params += ", "+this.parameters.get(i);
+        }
+        this.buffer += "define "+LLtype(type)+" @"+symbols.currentClass.name+"."+ident+
+                        "(i8* %this"+params+") {\n";
+
+        for (int i = 0; i < this.parameters.size(); i++) {
+            String currParam = this.parameters.get(i);
+            String paramType = currParam.split(" ")[0];
+            String paramDotName = currParam.split(" ")[1];
+            String paramName = paramDotName.split("\\.")[1];
+
+            this.buffer += "\t%"+paramName+" = alloca "+paramType+"\n";
+            this.buffer += "\tstore "+paramType+" "+paramDotName+", "+paramType+"* "+paramName+"\n";
+        }
+        emit(file, emptyBuffer());
+
+        n.f7.accept(this, null);
+        String declarations = emptyBuffer();
+        emit(file, declarations);
+
+        n.f8.accept(this, null);
+        String statements = emptyBuffer();
+        emit(file, statements);
+
+        String ret = n.f10.accept(this, argu);
+        if (ret.charAt(0) == '%' && ret.charAt(1) != '_' && ret != "%this"){
+            String register = newRegister();
+            this.buffer += "\t"+register+" = load "+LLtype(type)+", "+LLtype(type)+"* "+ret+"\n";
+            ret = register;
+        }
+        this.buffer += "\tret "+LLtype(type)+" "+ret+"\n";
+        this.buffer += "}\n\n";
+        emit(file, emptyBuffer());
+
+        symbols.currentFunction = null;
+        return null;
+    }
   
-   //   /**
-   //    * f0 -> FormalParameter()
-   //    * f1 -> FormalParameterTail()
-   //    */
-   //   public void visit(FormalParameterList n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      return _ret;
-   //   }
+    /**
+     * f0 -> FormalParameter()
+     * f1 -> FormalParameterTail()
+     */
+    @Override
+    public String visit(FormalParameterList n, String argu) {
+        n.f0.accept(this, argu);
+        n.f1.accept(this, argu);
+        return argu;
+    }
   
-   //   /**
-   //    * f0 -> Type()
-   //    * f1 -> Identifier()
-   //    */
-   //   public void visit(FormalParameter n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      return _ret;
-   //   }
+    /**
+     * f0 -> Type()
+     * f1 -> Identifier()
+     */
+    @Override
+    public String visit(FormalParameter n, String argu) {
+        String type = n.f0.accept(this, argu);
+        String ident = n.f1.accept(this, argu);
+        this.parameters.add(LLtype(type)+" %."+ident);
+        return argu;
+    }
   
-   //   /**
-   //    * f0 -> ( FormalParameterTerm() )*
-   //    */
-   //   public void visit(FormalParameterTail n, String argu) {
-   //      return n.f0.accept(this, file);
-   //   }
+    /**
+     * f0 -> ( FormalParameterTerm() )*
+    */
+    @Override
+    public String visit(FormalParameterTail n, String argu) {
+        return n.f0.accept(this, argu);
+    }
   
-   //   /**
-   //    * f0 -> ","
-   //    * f1 -> FormalParameter()
-   //    */
-   //   public void visit(FormalParameterTerm n, String argu) {
-   //      void _ret=null;
-   //      n.f0.accept(this, file);
-   //      n.f1.accept(this, file);
-   //      return _ret;
-   //   }
+    /**
+     * f0 -> ","
+     * f1 -> FormalParameter()
+     */
+    @Override
+    public String visit(FormalParameterTerm n, String argu) {
+        return n.f1.accept(this, argu);
+    }
   
     /**
      * f0 -> ArrayType()
@@ -932,6 +955,8 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         // Perform the call
         String call = newRegister();
         this.buffer += "\t"+call+" = call "+LLtype(methodType)+" "+cast2+"(i8* "+object+callParams+")\n";
+
+        this.resposeType = LLtype(methodType);
 
         return call;
     }
