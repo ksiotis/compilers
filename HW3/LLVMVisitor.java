@@ -4,7 +4,6 @@ import java.io.BufferedWriter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 
 public class LLVMVisitor extends GJDepthFirst<String, String> {
@@ -17,7 +16,6 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
     Integer randLabelCounter = 0;
     String buffer = "";
     ArrayList<String> parameters = new ArrayList<String>();
-    String resposeType = null;
 
     public void setOffsets(SymbolTable arg1, ClassOffsetsContainer arg2, BufferedWriter arg3) {
         this.symbols = arg1;
@@ -64,6 +62,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         for (Map.Entry<String, ClassTable> entry : this.symbols.classes.entrySet()) {
             String className = entry.getKey();
             Integer methodsNum = entry.getValue().methods.size();
+            
             if (entry.getValue().methods.keySet().contains("main")) methodsNum -= 1;
 
             String strMethods = "";
@@ -91,37 +90,36 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
             String line = "@."+className+"_vtable = global ["+methodsNum+" x i8*] ["+strMethods+"]\n";
 
             emit(file, line);
-
-            emit(file,
-                "declare i8* @calloc(i32, i32)\n"+
-                "declare i32 @printf(i8*, ...)\n"+
-                "declare void @exit(i32)\n"+
-                "\n"+
-                "@_cint = constant [4 x i8] c\"%d\\0a\\00\"\n"+
-                "@_cOOB = constant [15 x i8] c\"Out of bounds\\0a\\00\"\n"+
-                "@_cNSZ = constant [15 x i8] c\"Negative size\\0a\\00\"\n"+
-                "\n"+
-                "define void @print_int(i32 %i) {\n"+
-                "\t%_str = bitcast [4 x i8]* @_cint to i8*\n"+
-                "\tcall i32 (i8*, ...) @printf(i8* %_str, i32 %i)\n"+
-                "\tret void\n"+
-                "}\n"+
-                "\n"+
-                "define void @throw_oob() {\n"+
-                "\t%_str = bitcast [15 x i8]* @_cOOB to i8*\n"+
-                "\tcall i32 (i8*, ...) @printf(i8* %_str)\n"+
-                "\tcall void @exit(i32 1)\n"+
-                "\tret void\n"+
-                "}\n"+
-                "\n"+
-                "define void @throw_nsz() {\n"+
-                "\t%_str = bitcast [15 x i8]* @_cNSZ to i8*\n"+
-                "\tcall i32 (i8*, ...) @printf(i8* %_str)\n"+
-                "\tcall void @exit(i32 1)\n"+
-                "\tret void\n"+
-                "}\n\n"
-            );
         }
+        emit(file,
+            "declare i8* @calloc(i32, i32)\n"+
+            "declare i32 @printf(i8*, ...)\n"+
+            "declare void @exit(i32)\n"+
+            "\n"+
+            "@_cint = constant [4 x i8] c\"%d\\0a\\00\"\n"+
+            "@_cOOB = constant [15 x i8] c\"Out of bounds\\0a\\00\"\n"+
+            "@_cNSZ = constant [15 x i8] c\"Negative size\\0a\\00\"\n"+
+            "\n"+
+            "define void @print_int(i32 %i) {\n"+
+            "\t%_str = bitcast [4 x i8]* @_cint to i8*\n"+
+            "\tcall i32 (i8*, ...) @printf(i8* %_str, i32 %i)\n"+
+            "\tret void\n"+
+            "}\n"+
+            "\n"+
+            "define void @throw_oob() {\n"+
+            "\t%_str = bitcast [15 x i8]* @_cOOB to i8*\n"+
+            "\tcall i32 (i8*, ...) @printf(i8* %_str)\n"+
+            "\tcall void @exit(i32 1)\n"+
+            "\tret void\n"+
+            "}\n"+
+            "\n"+
+            "define void @throw_nsz() {\n"+
+            "\t%_str = bitcast [15 x i8]* @_cNSZ to i8*\n"+
+            "\tcall i32 (i8*, ...) @printf(i8* %_str)\n"+
+            "\tcall void @exit(i32 1)\n"+
+            "\tret void\n"+
+            "}\n\n"
+        );
     }
 
     String newRegister() {
@@ -326,7 +324,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         for (int i = 0; i < this.parameters.size(); i++) {
             params += ", "+this.parameters.get(i);
         }
-        this.buffer += "define "+LLtype(type)+" @"+symbols.currentClass.name+"."+ident+
+        this.buffer += "\ndefine "+LLtype(type)+" @"+symbols.currentClass.name+"."+ident+
                         "(i8* %this"+params+") {\n";
 
         for (int i = 0; i < this.parameters.size(); i++) {
@@ -336,7 +334,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
             String paramName = paramDotName.split("\\.")[1];
 
             this.buffer += "\t%"+paramName+" = alloca "+paramType+"\n";
-            this.buffer += "\tstore "+paramType+" "+paramDotName+", "+paramType+"* "+paramName+"\n";
+            this.buffer += "\tstore "+paramType+" "+paramDotName+", "+paramType+"* %"+paramName+"\n";
         }
         emit(file, emptyBuffer());
 
@@ -355,7 +353,7 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
             ret = register;
         }
         this.buffer += "\tret "+LLtype(type)+" "+ret+"\n";
-        this.buffer += "}\n\n";
+        this.buffer += "}\n";
         emit(file, emptyBuffer());
 
         symbols.currentFunction = null;
@@ -491,12 +489,12 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         String varType = getMethodVarType(ident);
         // if not locally look in class
         if (varType == null) {
-            varType = symbols.currentClass.fields.get(value);
-            int offset = getOffset(value);
+            varType = symbols.currentClass.fields.get(ident);
+            int offset = getOffset(ident);
             String register = newRegister();
-            this.buffer += "\t"+register+" = getelementptr i8, i8* %this, i32 "+offset+"\n";
+            this.buffer += "\t"+register+" = getelementptr i8, i8* %this, i32 "+(offset+8)+"\n";
             String register2 = newRegister();
-            this.buffer += "\t"+register2+" = bitcast i8* "+register+" to "+varType+"*"+"\n";
+            this.buffer += "\t"+register2+" = bitcast i8* "+register+" to "+LLtype(varType)+"*"+"\n";
             ident = register2;
         }
         else {
@@ -956,8 +954,6 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
         String call = newRegister();
         this.buffer += "\t"+call+" = call "+LLtype(methodType)+" "+cast2+"(i8* "+object+callParams+")\n";
 
-        this.resposeType = LLtype(methodType);
-
         return call;
     }
   
@@ -1021,13 +1017,13 @@ public class LLVMVisitor extends GJDepthFirst<String, String> {
             //if value is not a local var or argument
             if (varType == null) {
                 varType = symbols.currentClass.fields.get(value);
-                int offset = getOffset(value);
+                int offset = getVarOffset(symbols.currentClass.name, value);
                 String register = newRegister();
-                this.buffer += "\t"+register+" = getelementptr i8, i8* %this, i32 "+offset+"\n";
+                this.buffer += "\t"+register+" = getelementptr i8, i8* %this, i32 "+(offset+8)+"\n";
                 String register2 = newRegister();
-                this.buffer += "\t"+register2+" = bitcast i8* "+register+" to "+varType+"*"+"\n";
+                this.buffer += "\t"+register2+" = bitcast i8* "+register+" to "+LLtype(varType)+"*"+"\n";
                 String register3 = newRegister();
-                this.buffer += "\t"+register3+" = load "+varType+", "+varType+"* "+register2+"\n";
+                this.buffer += "\t"+register3+" = load "+LLtype(varType)+", "+LLtype(varType)+"* "+register2+"\n";
                 // if (varType = "boolean") //TODO remove?
                 //     this.is_bool = "yes";
                 return register3;
